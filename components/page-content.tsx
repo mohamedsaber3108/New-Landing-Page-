@@ -4,6 +4,7 @@ import { ConnectedJourney } from "./research-landing";
 import { useState } from "react";
 import { products, routes } from "@/data/products";
 import { ContactLeadForm } from "./contact-lead-form";
+import { ExploreSearch } from "./explore-search";
 
 type Locale = "en" | "ar";
 type Section = [string, string, string, string];
@@ -82,7 +83,7 @@ export function PageContent({slug,locale,onGuide}:{slug:string;locale:Locale;onG
  {slug==="faq"?<div className="faq-list">{faq.map(([title,body,at,ab])=><details key={title}><summary>{ar?at:title}</summary><p>{ar?ab:body}</p></details>)}</div>:<div className="editorial-sections">{(content[slug]??[]).map(([title,body,at,ab],i)=><article key={title}><span>{String(i+1).padStart(2,"0")}</span><h2>{ar?at:title}</h2><p>{ar?ab:body}</p></article>)}</div>}
  {slug==="contact"&&<ContactLeadForm locale={locale}/>}
  {slug==="ecosystem"&&<ConnectedJourney locale={locale}/>}
- {slug==="explore"&&<label className="product-search">{ar?"ابحث باسم المنتج أو المهارة":"Search by product or skill"}<input value={query} onChange={e=>setQuery(e.target.value)} placeholder={ar?"مثال: البرمجة، الوظائف، المواهب":"Try coding, jobs, talent"}/></label>}
+ {slug==="explore"&&<ExploreSearch locale={locale}/>}
  {!["faq","cookies"].includes(slug)&&<section><h2>{ar?"اختر وجهتك":"Choose your destination"}</h2><div className="page-product-grid">{matches.map(p=><article key={p.id}><h3>{ar?p.arabicName:p.name}</h3><p>{ar?p.arabicDescription:p.description}</p><ul>{(ar?p.arabicFeatures:p.features).map(f=><li key={f}>{f}</li>)}</ul><a className="product-link" href={p.domain} target="_blank" rel="noreferrer">{ar?p.arabicCta:p.cta}</a></article>)}</div>{matches.length===0&&<p role="status">{ar?"لا توجد نتائج. جرّب كلمة أخرى.":"No matches. Try another term."}</p>}</section>}
  {!["privacy","terms","cookies","status"].includes(slug)&&<section className="page-help"><h2>{ar?"تحتاج مساعدة في اختيار البداية؟":"Need help choosing a starting point?"}</h2><button className="primary-button" onClick={onGuide}>{ar?"افتح دليل يوزم":"Open USAM Guide"}</button></section>}
  </div>;

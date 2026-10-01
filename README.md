@@ -1,126 +1,126 @@
-# vinext-starter
+# USAM Master Ecosystem
 
-A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
+The intelligent front door for the USAM ecosystem — a bilingual (English / Arabic,
+full RTL) gateway that helps a visitor start with a **goal** and continue in the
+right specialist product: **Education · Career · Freelancing · Kids**.
 
-## Prerequisites
+This repository is the **Master website + its own backend**. The four specialist
+products are external services; this project links to them and owns only the data
+the gateway itself needs (contact leads, anonymous guide signals, content
+feedback).
 
-- Node.js `>=22.13.0`
-- Portable: Windows, macOS, or Linux; no Bash required
-- Managed Linux: managed Linux runtime with Bash, `flock`, `curl`, `sha256sum`, and GNU `timeout`
-- Git is required only for publishing
+- Stack: React 19, TypeScript, Vinext, Vite, Cloudflare Workers, D1 + Drizzle ORM.
+- Live reference: https://usam-master-ecosystem.abdelrahman2611.chatgpt.site
 
-## Sites Lifecycle
+---
 
-The Sites initializer copies the shared starter and selects managed-linux only when `SITES_MANAGED_LINUX_CONTAINER=1`; otherwise it selects portable. It saves the selection only in ignored `.sites-runtime/execution-profile.json`. Both profiles copy/configure first, then use the plugin's separate `install-dependencies.mjs` step to measure installation independently. Edit source under `app/` and follow the Sites skill for installation, preview, builds, and publishing.
+## Quick start
 
-Run `node <plugin-root>/scripts/configure-execution-profile.mjs` only when the profile is unknown for the current checkout and environment. Profile changes do not alter tracked source or require reinstalling otherwise-valid dependencies; restart an existing preview to use the new selection. Do not commit or upload `.sites-runtime/`.
+Requires Node.js `>=22.13`.
 
-This starter does not use `wrangler.jsonc`.
-
-`install:ci` runs `npm ci` once against the shared lockfile, disables parent-workspace discovery, and includes required dev/optional dependencies despite production/omit settings. Sharp defaults to prebuilt binaries unless explicitly configured otherwise. Do not overlap installers.
-
-- **Portable:** Preserve host HOME, npm cache, registry, proxy, temporary paths, retry/concurrency settings, and lifecycle-script policy. Use `--prefer-offline --no-audit --no-fund`.
-- **Managed Linux:** Use the existing project-local HOME/cache/tmp setup and Linux install lock, tarball preflight, and timeout. Restore the image-seeded npm cache only when its lockfile hash matches; retain network fallback. Builds keep their existing timeout. These helpers are not invoked by the portable profile.
-
-`scripts/sites-env.mjs` preserves the caller's HOME, npm cache, proxy, XDG, and temporary-directory configuration while defaulting Wrangler and Miniflare state to the checkout. If npm reports an unwritable cache, select a writable path with `npm_config_cache` for that install. The `dev` and `start` scripts also keep Wrangler logs inside the checkout. Generated `.sites-runtime/` and `.wrangler/` directories are disposable and ignored by Git.
-
-On portable, `npm run dev` uses `vinext dev` with HMR, starting at port 5173. Vinext records the running server in ignored `.vinext/` state, rejects an ordinary duplicate launch, and recovers stale state after a stopped process; exactly simultaneous starts can race. Pass `--port <port>` or `--hostname <host>` after `npm run dev --` when needed; keep portable previews on loopback.
-
-For browser QA on managed Linux, use `sites-preview start`. The project's dev script runs Vite and accepts the supervisor's `--host 0.0.0.0 --port 4173 --strictPort` arguments. The internal browser uses `http://terminal.local:4173/`; it is not a user-facing URL. The supervisor owns the preview lifecycle. The ignored local profile survives the supervisor's cleared process environment.
-
-The portable profile simulates ChatGPT sign-in only for loopback development requests. Visit `/signin-with-chatgpt?return_to=/` to sign in as `local_seedy` (`seedy@sites.test`, display name `Seedy`) and `/signout-with-chatgpt?return_to=/` to sign out. The development cookie preserves that identity across server restarts. Mock auth is disabled in the managed-linux profile and is not included in production builds; hosted authentication remains dispatch-owned.
-
-The Worker uses `vinext/server/fetch-handler`, including Vinext's config-aware image handling. After building, `npm start` runs that Worker locally through Wrangler on `127.0.0.1`, sharing `.wrangler/state` with dev preview and local D1 migrations; it does not deploy the site or simulate sign-in. Use the URL printed by the server. Pass `npm start -- --port <port>` to select a different built-preview port.
-
-Local previews use Miniflare's placeholder `Request.cf` metadata without a network lookup. Set `CLOUDFLARE_CF_FETCH_ENABLED=true` to opt into fetching preview metadata; this setting does not change hosted request metadata.
-
-Local tool usage metrics are disabled by default. Set `WRANGLER_SEND_METRICS=true` to opt in.
-
-## Included Shape
-
-- edit site code under `app/`
-- `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
-- `@cloudflare/workers-types` provides Worker types; `cloudflare-env.d.ts` declares optional `DB`/`BUCKET` bindings—update these declarations if binding names change
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Use it as the durable user key; use email and name for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive `oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty `name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by `oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+npm ci            # install from the locked dependency set
+npm run dev       # start the dev server (Vinext + HMR)
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+Then open the local address the dev server prints.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use the returned `userId` as the stable user key for user-owned records; do not use email as a durable identifier.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send anonymous visitors through Sign in with ChatGPT.
-- In a Server Component, start sign-in with `<a href={chatGPTSignInPath(returnTo)} target="_top">`. The auth helper module is server-only; do not import it into a Client Component.
-- Do not use `fetch`, XHR, a client-side router, or a framework link that can prefetch the sign-in route. SIWC must start as a top-level navigation.
-- Never request the AuthAPI authorization endpoint directly. The dispatch-owned `/signin-with-chatgpt` route must start the SIWC flow.
-- Use `chatGPTSignOutPath(returnTo)` for browser sign-out links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the OAuth cookies, and identity header injection. Do not implement app routes for those reserved paths. Routes that do not import and call the helper remain anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the Sites hosting platform's access policy controls for workspace-wide restrictions, or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Local D1 migrations
-
-For a D1-backed local preview, generate SQL with `npm run db:generate`. Build once through the Sites skill's build entrypoint (or `npm run build` for standalone use) to generate `dist/server/wrangler.json`, rebuilding if bindings change. From the project root, apply each pending migration in order:
-
-```sh
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_example.sql
+```bash
+npx tsc --noEmit  # type-check
+npm run build     # production build (Cloudflare artifact)
+npm start         # preview the built Worker locally (D1/R2 aware)
+npm test          # run the vitest suite
+npm run db:generate   # generate a Drizzle migration after schema changes
 ```
 
-Replace the filename with the pending migration and `DB` with your D1 binding name if different. Use `.wrangler/state`, not `.wrangler/state/v3`; Wrangler adds the versioned directories. Do not replay migrations already applied locally. This updates only the preview database; publishing applies production migrations separately.
+---
 
-## Diagnostic Commands
+## What's implemented
 
-- `npm run install:ci`: perform the one locked dependency install
-- `npm run dev`: start the Vite/Vinext development server
-- `npm run build`: build the deployable Sites artifact
-- `npm run start`: preview the built Worker locally with D1/R2 support
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+### Frontend
+- Preserved hero, green identity, logo, and the full-height **Ask USAM** side
+  drawer (English opens right, Arabic opens left).
+- 1 landing route + 18 informational routes, all bilingual with light / green
+  dark mode and keyboard access.
+- A working **Contact** lead form and a live **Explore** search, both with
+  loading / error / empty / success states.
 
-When using the Sites plugin, follow its skill instructions for installation, builds, and publishing. These npm commands remain available for standalone use.
+### Backend (`/api/v1`, Cloudflare D1 + Drizzle)
+All responses use one envelope: `{ data, meta }` on success,
+`{ error: { code, message, fieldErrors?, retryable, requestId } }` on failure.
 
-The portable build runs Vinext directly without a host `timeout` command. The managed-linux build uses `scripts/build-verified.sh` and its existing `SITES_BUILD_TIMEOUT` setting.
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/leads` | Durable contact-lead capture: transactional lead + outbox write, idempotency-key support, concurrent-duplicate safety, public reference. |
+| `GET /api/v1/leads` | The signed-in owner's own leads (private). |
+| `POST /api/enquiries` | Backward-compatible alias of the lead endpoint (no HTTP redirect; same core logic). |
+| `GET /api/v1/products` | Public product registry. |
+| `GET /api/v1/content/pages/:slug` | Published informational page sections. |
+| `GET /api/v1/faqs` | Published FAQ answers. |
+| `GET /api/v1/legal/:type` | Privacy / terms / cookies — returned as `provisional`. |
+| `GET /api/v1/status` | Service status — honest `not_monitored` state. |
+| `GET /api/v1/search` | Public product / capability search with cursor pagination. |
+| `POST /api/v1/feedback` | Content helpfulness signal (rating only, no free text). |
+| `POST /api/v1/guide/resolve` | Local goal → product routing (labelled local, not live AI). |
+| `POST /api/v1/admin/outbox/process` | Operations: drain the outbox (token-gated, fails closed). |
 
-## Learn More
+### Reliability primitives
+- **Idempotency keys** (`idempotency_keys`): a composite primary key is the
+  concurrency guard — one writer proceeds, duplicates replay or conflict.
+- **Transactional outbox** (`outbox_events`): events are written in the same
+  transaction as the business row; a delivery worker drains them later. With no
+  channel configured, events stay `pending` and that is reported honestly.
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+See [`docs/USAM-backend-api.md`](docs/USAM-backend-api.md) for the full API
+contract and [`docs/USAM-gap-matrix.md`](docs/USAM-gap-matrix.md) for the
+evidence-backed state of every route and the remaining / blocked work.
+
+---
+
+## Configuration interface
+
+Set via environment; **no secrets are committed**. Missing integrations produce a
+`not_configured` / disabled state and never fake success.
+
+| Variable | Effect |
+|----------|--------|
+| `USAM_LEAD_NOTIFY_WEBHOOK` | Enables webhook delivery of lead-notification outbox events. |
+| `USAM_LEAD_NOTIFY_EMAIL` | Marks an email channel (provider wiring is a gated task). |
+| `USAM_ADMIN_TOKEN` | Required for the admin outbox endpoint; unset = admin disabled. |
+
+---
+
+## Blocked (needs a business decision / external access)
+
+Identity/SSO, product adapters, live AI gateway, pricing feed, payments, child
+accounts, approved legal text, and live status monitoring are intentionally
+**not** implemented and surface honest unavailable states. The exact information
+required to unblock each is listed in
+[`docs/USAM-backend-api.md`](docs/USAM-backend-api.md#blocked-pending-external-input).
+
+---
+
+## Project layout
+
+```
+app/            routes + /api endpoints
+components/     UI (usam-site, research-landing, page-content, forms) + ui/ kit
+data/           product + route catalogue
+db/             Drizzle schema + D1 client
+drizzle/        generated SQL migrations
+lib/api/        envelope, idempotency, leads, content, outbox worker
+docs/           API reference + gap matrix
+test/           vitest integration suite
+scripts/        Sites lifecycle + build/install helpers
+```
+
+---
+
+## Platform notes (vinext starter)
+
+This is a Vinext project with a Cloudflare-compatible production output, not a
+plain Next.js build — preserve the supplied scripts and lockfile. For D1-backed
+local previews, generate SQL with `npm run db:generate`, build once, then apply
+each pending migration with Wrangler against `.wrangler/state`. Local tooling
+state (`.wrangler/`, `.vinext/`, `.sites-runtime/`, `dist/`) is disposable and
+git-ignored.

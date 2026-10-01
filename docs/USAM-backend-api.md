@@ -118,6 +118,43 @@ Reports `overall: "not_monitored"`, `monitoringEnabled: false`, and every
 component as `not_monitored` with `checkedAt: null`. It never renders a green
 "operational" state because no monitoring exists yet.
 
+### GET /api/v1/search?q=&product=&audience=&cursor=&limit= — handoff C05
+
+Public product / capability search over published content only. Ranking: exact
+title → title prefix → haystack substring, with Arabic/diacritic normalization.
+Deterministic **cursor pagination** (default 20, max 100; the doc id is the
+tie-breaker and the cursor). `product` and `audience` filters are allowlisted;
+unknown values return `422`. Response:
+`{ data: { query, count, results: [{ id, type, productId, title, summary, availability, destination }] }, meta: { requestId, nextCursor? } }`.
+No private records are searchable here.
+
+### POST /api/v1/feedback — handoff C07
+
+Records a content helpfulness signal. Body is `.strict()`:
+`{ contentId, rating: 1 | -1, locale }` — **any extra key is rejected** so the
+public endpoint cannot be used to harvest free text / PII. `contentId` must be a
+known id (`faq-N` or `page:<slug>`), else `404`. Success `201 { data: { recorded: true } }`.
+
+### POST /api/v1/guide/resolve — handoff A02
+
+Local goal → product routing wrapping `lib/guide-intent.ts`. Body
+`{ goal, locale }`. Resolves the destination URL **server-side** from the product
+registry (never from model text) and records an anonymous guide signal (resolved
+intent only — never the raw goal). Always `mode: "local"`; `status` is
+`resolved` (with a `suggestion`), `needs_clarification` (with a `question`), or
+`unknown`. It returns a suggestion, not an action, and never emits a CTA for an
+unconfigured product.
+
+### POST /api/v1/admin/outbox/process — operations
+
+Drains due `pending` outbox events to the configured channel. **Gated by the
+`x-admin-token` header against `USAM_ADMIN_TOKEN`, and fails closed with `403`
+when that env var is unset** — a public URL is denied by the server, not merely
+hidden. Returns a summary `{ status: "disabled" | "ran", channel, claimed,
+delivered, failed, deadLettered }`. `status: "disabled"` means no channel is
+configured and events remain `pending`. A future Cloudflare Cron/Queue consumer
+can call `processOutboxBatch()` directly without this HTTP gate.
+
 ## Reliability primitives
 
 - `idempotency_keys` (composite PK `scope, actor, key`): the unique constraint
