@@ -143,3 +143,157 @@ export function publicStatus() {
     incidents: [] as Array<Record<string, unknown>>,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Feedback id validation (handoff C07)
+// ---------------------------------------------------------------------------
+
+/** The set of content ids the public feedback endpoint will accept. */
+export function knownContentIds(): Set<string> {
+  const ids = new Set<string>();
+  for (let i = 1; i <= faqs.length; i++) ids.add(`faq-${i}`);
+  for (const slug of Object.keys(routes)) ids.add(`page:${slug}`);
+  return ids;
+}
+
+// ---------------------------------------------------------------------------
+// Public capability search (handoff C05)
+// ---------------------------------------------------------------------------
+
+export type SearchAudience = "individual" | "enterprise" | "government" | "talent" | "kids";
+
+type SearchDoc = {
+  id: string;
+  type: "product" | "capability";
+  productId: string;
+  audiences: SearchAudience[];
+  // Lowercased haystacks for matching, per locale.
+  haystackEn: string;
+  haystackAr: string;
+  // Display payload resolved at query time by locale.
+  en: { title: string; summary: string };
+  ar: { title: string; summary: string };
+  destination: string;
+};
+
+/** Which audiences each product is most relevant to (mirrors the site's focus maps). */
+const PRODUCT_AUDIENCES: Record<string, SearchAudience[]> = {
+  education: ["individual", "enterprise", "government"],
+  career: ["individual", "talent", "enterprise"],
+  freelancing: ["talent", "enterprise", "individual"],
+  kids: ["kids", "government"],
+};
+
+/** Build the in-memory search index from published products + their features. */
+function buildSearchIndex(): SearchDoc[] {
+  const docs: SearchDoc[] = [];
+  for (const p of products) {
+    const audiences = PRODUCT_AUDIENCES[p.id] ?? ["individual"];
+    // One product-level document.
+    docs.push({
+      id: `product:${p.id}`,
+      type: "product",
+      productId: p.id,
+      audiences,
+      haystackEn: `${p.name} ${p.description} ${p.features.join(" ")}`.toLowerCase(),
+      haystackAr: `${p.arabicName} ${p.arabicDescription} ${p.arabicFeatures.join(" ")}`.toLowerCase(),
+      en: { title: p.name, summary: p.description },
+      ar: { title: p.arabicName, summary: p.arabicDescription },
+      destination: p.domain,
+    });
+    // One capability document per feature.
+    p.features.forEach((feature, i) => {
+      const arFeature = p.arabicFeatures[i] ?? feature;
+      docs.push({
+        id: `capability:${p.id}:${i}`,
+        type: "capability",
+        productId: p.id,
+        audiences,
+        haystackEn: `${feature} ${p.name}`.toLowerCase(),
+        haystackAr: `${arFeature} ${p.arabicName}`.toLowerCase(),
+        en: { title: feature, summary: `${feature} — part of ${p.name}.` },
+        ar: { title: arFeature, summary: `${arFeature} — ضمن ${p.arabicName}.` },
+        destination: p.domain,
+      });
+    });
+  }
+  return docs;
+}
+
+const SEARCH_INDEX = buildSearchIndex();
+
+/** Normalize Arabic/か diacritics and case for forgiving matching. */
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/[\u064B-\u065F]/g, "");
+}
+
+export type SearchParams = {
+  q: string;
+  locale: Locale;
+  product?: string | null;
+  audience?: SearchAudience | null;
+  cursor?: string | null;
+  limit?: number;
+};
+
+export type SearchResultItem = {
+  id: string;
+  type: "product" | "capability";
+  productId: string;
+  title: string;
+  summary: string;
+  availability: "external";
+  destination: string;
+};
+
+/**
+ * Public capability/product search with deterministic cursor pagination.
+ * Ranking: exact title match → title prefix → substring in haystack.
+ */
+export function searchPublic(params: SearchParams): {
+  items: SearchResultItem[];
+  nextCursor: string | null;
+} {
+  const limit = Math.min(Math.max(params.limit ?? 20, 1), 100);
+  const q = normalize(params.q.trim());
+
+  let scored = SEARCH_INDEX.map((doc) => {
+    const display = params.locale === "ar" ? doc.ar : doc.en;
+    const haystack = normalize(params.locale === "ar" ? doc.haystackAr : doc.haystackEn);
+    const title = normalize(display.title);
+    let score = -1;
+    if (!q) score = 0; // empty query lists everything (filtered below)
+    else if (title === q) score = 3;
+    else if (title.startsWith(q)) score = 2;
+    else if (haystack.includes(q)) score = 1;
+    return { doc, display, score };
+  }).filter((r) => r.score >= 0);
+
+  if (params.product) scored = scored.filter((r) => r.doc.productId === params.product);
+  if (params.audience) scored = scored.filter((r) => r.doc.audiences.includes(params.audience as SearchAudience));
+
+  // Deterministic order: score desc, then stable id asc (id is the tie-breaker
+  // the cursor relies on).
+  scored.sort((a, b) => (b.score - a.score) || (a.doc.id < b.doc.id ? -1 : a.doc.id > b.doc.id ? 1 : 0));
+
+  // Cursor is the last-returned doc id; resume strictly after it.
+  const start = params.cursor ? scored.findIndex((r) => r.doc.id === params.cursor) + 1 : 0;
+  const page = scored.slice(start, start + limit);
+  const nextCursor = start + limit < scored.length ? page[page.length - 1]?.doc.id ?? null : null;
+
+  const items: SearchResultItem[] = page.map((r) => ({
+    id: r.doc.id,
+    type: r.doc.type,
+    productId: r.doc.productId,
+    title: r.display.title,
+    summary: r.display.summary,
+    availability: "external" as const,
+    destination: r.doc.destination,
+  }));
+
+  return { items, nextCursor };
+}

@@ -217,3 +217,32 @@ export const outboxEvents = sqliteTable(
 
 export type OutboxEvent = typeof outboxEvents.$inferSelect;
 export type NewOutboxEvent = typeof outboxEvents.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Content feedback (handoff C07) — FAQ / page helpfulness signals
+// ---------------------------------------------------------------------------
+
+/**
+ * Anonymous helpfulness feedback for a published content item (FAQ answer or
+ * page). Deliberately stores NO free text: only a bounded rating and the
+ * content id, so a public endpoint cannot be used to harvest personal data.
+ */
+export const content_feedback = sqliteTable(
+  "content_feedback",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // e.g. "faq-3" or a page slug; validated against known ids server-side.
+    contentId: text("content_id").notNull(),
+    // -1 (not helpful) or 1 (helpful). No scale that could encode a message.
+    rating: integer("rating").notNull(),
+    locale: text("locale").notNull().default("en"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("content_feedback_content_idx").on(table.contentId),
+    index("content_feedback_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export type ContentFeedback = typeof content_feedback.$inferSelect;
+export type NewContentFeedback = typeof content_feedback.$inferInsert;

@@ -15,6 +15,13 @@
       "when": 1790870663094,
       "tag": "0001_plain_khan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790874430021,
+      "tag": "0002_glossy_kid_colt",
+      "breakpoints": true
     }
   ]
 }
