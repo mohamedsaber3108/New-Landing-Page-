@@ -1,7 +1,10 @@
 "use client";
 
-import Link from "next/link";
+// Primary navigation uses plain <a> anchors (see components/nav-link.tsx) so
+// links always navigate even if client hydration is incomplete.
+import Link from "./nav-link";
 import { useEffect, useState } from "react";
+
 import { ArrowLeft, ArrowRight, ArrowUpRight, Baby, Blocks, Bot, BriefcaseBusiness, Building2, CheckCircle2, Globe2, GraduationCap, Info, Landmark, Menu, Moon, Network, Route, Search, Send, ShieldCheck, Sparkles, Sun, UserRound, X } from "lucide-react";
 import { ResearchLanding, GuideConnector } from "./research-landing";
 import { PageContent } from "./page-content";

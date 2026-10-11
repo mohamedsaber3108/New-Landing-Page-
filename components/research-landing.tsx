@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "./nav-link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BookOpen, BriefcaseBusiness, Blocks, Baby, Check, CheckCircle2, GraduationCap, Sparkles, Target, UserRound, Building2, Landmark, Code2, FileText, MessageSquare, Compass, Layers, ShieldCheck, X, Plus, Bot, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "./nav-link";
 import { ConnectedJourney } from "./research-landing";
 import { useState } from "react";
 import { products, routes } from "@/data/products";
