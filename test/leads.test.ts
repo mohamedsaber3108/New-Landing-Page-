@@ -3,6 +3,7 @@ import { FakeStore } from "./fake-db";
 
 vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, value: unknown) => ({ kind: "eq", col, value }),
+  lt: (col: unknown, value: unknown) => ({ kind: "lt", col, value }),
   and: (...parts: unknown[]) => ({ kind: "and", parts }),
   desc: (c: unknown) => c,
   sql: (strings: TemplateStringsArray) => ({ _sql: strings.join("") }),
@@ -18,7 +19,7 @@ vi.mock("@/app/chatgpt-auth", () => ({
   getChatGPTUser: async () => userRef.current,
 }));
 
-import { createLead, listOwnLeads, notificationChannelConfigured } from "@/lib/api/leads";
+import { createLead, listAllLeads, listOwnLeads, notificationChannelConfigured } from "@/lib/api/leads";
 
 const base = {
   name: "Example Person",
@@ -220,6 +221,47 @@ describe("listOwnLeads", () => {
       expect(res.leads).toHaveLength(1);
       expect(res.leads[0].reference).toMatch(/^USAM-/);
       expect(res.leads[0].reference).not.toBe("USAM-OTHER1");
+    }
+  });
+});
+
+describe("listAllLeads (staff inbox)", () => {
+  beforeEach(() => {
+    store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [] };
+    userRef.current = null;
+  });
+
+  it("returns ALL leads including anonymous enterprise/government submissions", async () => {
+    // Anonymous enterprise lead (no signed-in user) — the exact case the
+    // owner-scoped endpoint could not surface.
+    await createLead({
+      input: { ...base, kind: "enterprise", organization: "Acme", structured: { enquiryType: "hiring", privacyAcknowledged: true } },
+    });
+    await createLead({
+      input: { ...base, kind: "government", organization: "Ministry", structured: { enquiryType: "youth-program", privacyAcknowledged: true } },
+    });
+
+    const res = await listAllLeads({ limit: 50 });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.leads.length).toBe(2);
+      const kinds = res.leads.map((l) => l.kind).sort();
+      expect(kinds).toEqual(["enterprise", "government"]);
+      // Structured fields are present for staff triage.
+      const ent = res.leads.find((l) => l.kind === "enterprise")!;
+      expect(ent.organization).toBe("Acme");
+      expect(ent.enquiryType).toBe("hiring");
+    }
+  });
+
+  it("filters by kind", async () => {
+    await createLead({ input: { ...base, kind: "enterprise", structured: { enquiryType: "hiring" } } });
+    await createLead({ input: { ...base, kind: "government", structured: { enquiryType: "youth-program" } } });
+    const res = await listAllLeads({ kind: "government", limit: 50 });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.leads.length).toBe(1);
+      expect(res.leads[0].kind).toBe("government");
     }
   });
 });

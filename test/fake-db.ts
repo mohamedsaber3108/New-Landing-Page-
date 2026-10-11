@@ -18,8 +18,11 @@ import { enquiries, idempotencyKeys, outboxEvents } from "@/db/schema";
 
 type Row = Record<string, unknown>;
 
-// --- predicate descriptors (shadow drizzle's eq/and just enough) ------------
-type Pred = { kind: "eq"; col: ColRef; value: unknown } | { kind: "and"; parts: Pred[] };
+// --- predicate descriptors (shadow drizzle's eq/and/lt just enough) ---------
+type Pred =
+  | { kind: "eq"; col: ColRef; value: unknown }
+  | { kind: "lt"; col: ColRef; value: unknown }
+  | { kind: "and"; parts: Pred[] };
 type ColRef = { _table: string; _name: string };
 
 function colName(col: unknown): { table: string; name: string } {
@@ -76,6 +79,7 @@ export class FakeStore {
   private matches(table: string, row: Row, pred: Pred): boolean {
     if (pred.kind === "and") return pred.parts.every((p) => this.matches(table, row, p));
     const { name } = colName(pred.col);
+    if (pred.kind === "lt") return (row[name] as number) < (pred.value as number);
     return row[name] === pred.value;
   }
 

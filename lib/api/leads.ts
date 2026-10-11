@@ -3,7 +3,7 @@
 // here guarantees both paths behave identically (handoff: no divergent copies).
 
 import { z } from "zod";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   BUDGET_RANGES,
@@ -283,6 +283,69 @@ export async function listOwnLeads(): Promise<
       .where(eq(enquiries.userId, user.userId))
       .orderBy(desc(enquiries.createdAt), desc(enquiries.id))
       .limit(50);
+    return { ok: true, leads: rows };
+  } catch (error) {
+    const d = dependencyError(error);
+    return { ok: false, status: d.status, error: d.error };
+  }
+}
+
+/**
+ * Staff-only: list ALL enquiries (including anonymous enterprise/government
+ * submissions that have no owner). This is the authoritative inbox for the
+ * team. It must only be called from a route that has already passed admin
+ * authorization — it performs no auth itself. Supports simple filtering by
+ * `kind` and cursor-less pagination via `limit`/`beforeId`.
+ */
+export async function listAllLeads(opts: {
+  kind?: string | null;
+  limit?: number;
+  beforeId?: number | null;
+}): Promise<
+  | { ok: true; leads: Array<Record<string, unknown>> }
+  | { ok: false; status: number; error: { code: ApiErrorCode; message: string } }
+> {
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+  try {
+    const db = getDb() as unknown as Db;
+    const base = db
+      .select({
+        id: enquiries.id,
+        reference: enquiries.reference,
+        createdAt: enquiries.createdAt,
+        kind: enquiries.kind,
+        status: enquiries.status,
+        name: enquiries.name,
+        email: enquiries.email,
+        organization: enquiries.organization,
+        role: enquiries.role,
+        phone: enquiries.phone,
+        country: enquiries.country,
+        product: enquiries.product,
+        enquiryType: enquiries.enquiryType,
+        participantRange: enquiries.participantRange,
+        timeline: enquiries.timeline,
+        budgetRange: enquiries.budgetRange,
+        beneficiaries: enquiries.beneficiaries,
+        message: enquiries.message,
+        marketingOptIn: enquiries.marketingOptIn,
+        privacyNoticeVersion: enquiries.privacyNoticeVersion,
+        privacyAcknowledgedAt: enquiries.privacyAcknowledgedAt,
+        userId: enquiries.userId,
+      })
+      .from(enquiries);
+
+    const conditions = [];
+    if (opts.kind) conditions.push(eq(enquiries.kind, opts.kind));
+    if (opts.beforeId != null) conditions.push(lt(enquiries.id, opts.beforeId));
+
+    const rows = await (conditions.length
+      ? base.where(and(...conditions))
+      : base
+    )
+      .orderBy(desc(enquiries.id))
+      .limit(limit);
+
     return { ok: true, leads: rows };
   } catch (error) {
     const d = dependencyError(error);
