@@ -53,4 +53,34 @@ describe("createLeadSchema", () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.marketingOptIn).toBe(false);
   });
+
+  it("accepts a valid structured enterprise block", () => {
+    const parsed = createLeadSchema.safeParse({
+      ...valid,
+      structured: { enquiryType: "hiring", participantRange: "11-50", timeline: "3-6-months", budgetRange: "10k-50k", privacyAcknowledged: true },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects an unknown enquiryType in the structured block", () => {
+    const parsed = createLeadSchema.safeParse({ ...valid, structured: { enquiryType: "bribe" } });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects an unknown timeline/budget enum", () => {
+    expect(createLeadSchema.safeParse({ ...valid, structured: { timeline: "someday" } }).success).toBe(false);
+    expect(createLeadSchema.safeParse({ ...valid, structured: { budgetRange: "trillions" } }).success).toBe(false);
+  });
+
+  it("rejects unknown keys in the structured block (strict)", () => {
+    const parsed = createLeadSchema.safeParse({ ...valid, structured: { secretField: "x" } });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("still accepts a lead with no structured block (Contact form)", () => {
+    const { ...noStruct } = valid;
+    const parsed = createLeadSchema.safeParse(noStruct);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.structured).toBeUndefined();
+  });
 });

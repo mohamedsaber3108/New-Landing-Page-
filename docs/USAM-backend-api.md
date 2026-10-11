@@ -74,6 +74,44 @@ Errors: `422 validation_failed` (with `fieldErrors`), `409 conflict`,
 `503 dependency_unavailable` (DB binding or table missing), `400 bad_request`
 (non-JSON body).
 
+#### Structured enterprise / government enquiries
+
+`POST /api/v1/leads` accepts an optional `structured` object used by the
+Enterprises (`kind: "enterprise"`) and Government (`kind: "government"`) forms.
+The Contact form omits it entirely and is unaffected.
+
+```json
+{
+  "name": "…", "email": "…", "kind": "enterprise",
+  "organization": "Acme Co", "locale": "en", "message": "…",
+  "marketingOptIn": false,
+  "structured": {
+    "role": "Head of Talent",
+    "phone": "+20 100 123 4567",
+    "country": "Egypt",
+    "enquiryType": "hiring | workforce-development | project-expertise | partnership | other | learning-program | talent-development | youth-program | innovation-partnership",
+    "participantRange": "1-10 | 11-50 | 51-200 | 201-1000 | 1000+",
+    "timeline": "immediate | 1-3-months | 3-6-months | 6-12-months | not-decided",
+    "budgetRange": "under-10k | 10k-50k | 50k-250k | 250k-plus | prefer-to-discuss",
+    "beneficiaries": "free text (government)",
+    "privacyNoticeVersion": "2026-01",
+    "privacyAcknowledged": true
+  }
+}
+```
+
+- `structured` is `.strict()`: unknown keys are rejected (422). Each enum is
+  validated; invalid values → 422. All fields are optional/nullable.
+- Persisted to dedicated **columns** on `enquiries` (not folded into `message`):
+  `role, phone, country, enquiry_type, participant_range, timeline,
+  budget_range, beneficiaries, privacy_notice_version, privacy_acknowledged_at`.
+- `privacy_acknowledged_at` is set to the server timestamp **only** when
+  `privacyAcknowledged` is true; `privacy_notice_version` records which notice
+  version the submitter accepted.
+- **Storage uses D1's `db.batch([...])`** for the atomic lead+outbox write.
+  Cloudflare D1 does not support Drizzle's interactive `db.transaction()`, which
+  throws at runtime — `batch` is the correct atomic primitive.
+
 ### GET /api/v1/leads — owner-scoped
 
 Returns the signed-in ChatGPT user's own leads only. Anonymous → `401`.

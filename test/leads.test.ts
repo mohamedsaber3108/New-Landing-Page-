@@ -108,6 +108,80 @@ describe("createLead", () => {
     expect(result.ok).toBe(true);
     expect(store.tables.enquiries[0].userId).toBe("user_123");
   });
+
+  it("Contact form regression: a lead with no `structured` block stores nulls for structured columns", async () => {
+    const result = await createLead({ input: base });
+    expect(result.ok).toBe(true);
+    const lead = store.tables.enquiries[0];
+    expect(lead.role).toBeNull();
+    expect(lead.enquiryType).toBeNull();
+    expect(lead.privacyAcknowledgedAt).toBeNull();
+    expect(lead.budgetRange).toBeNull();
+  });
+
+  it("persists structured enterprise fields and records privacy acknowledgement timestamp", async () => {
+    const result = await createLead({
+      input: {
+        ...base,
+        kind: "enterprise",
+        organization: "Example Corp",
+        structured: {
+          role: "Head of People",
+          phone: "+20 100 000 0000",
+          country: "Egypt",
+          enquiryType: "hiring",
+          participantRange: "51-200",
+          timeline: "1-3-months",
+          budgetRange: "50k-250k",
+          privacyNoticeVersion: "2026-01",
+          privacyAcknowledged: true,
+        },
+      },
+    });
+    expect(result.ok).toBe(true);
+    const lead = store.tables.enquiries[0];
+    expect(lead.kind).toBe("enterprise");
+    expect(lead.organization).toBe("Example Corp");
+    expect(lead.role).toBe("Head of People");
+    expect(lead.country).toBe("Egypt");
+    expect(lead.enquiryType).toBe("hiring");
+    expect(lead.participantRange).toBe("51-200");
+    expect(lead.timeline).toBe("1-3-months");
+    expect(lead.budgetRange).toBe("50k-250k");
+    expect(lead.privacyNoticeVersion).toBe("2026-01");
+    expect(typeof lead.privacyAcknowledgedAt).toBe("string"); // timestamp recorded
+  });
+
+  it("persists structured government fields incl. beneficiaries", async () => {
+    const result = await createLead({
+      input: {
+        ...base,
+        kind: "government",
+        organization: "Ministry of Example",
+        structured: {
+          enquiryType: "youth-program",
+          beneficiaries: "Secondary school students in rural districts",
+          timeline: "not-decided",
+          privacyNoticeVersion: "2026-01",
+          privacyAcknowledged: true,
+        },
+      },
+    });
+    expect(result.ok).toBe(true);
+    const lead = store.tables.enquiries[0];
+    expect(lead.kind).toBe("government");
+    expect(lead.enquiryType).toBe("youth-program");
+    expect(lead.beneficiaries).toContain("students");
+    expect(lead.timeline).toBe("not-decided");
+  });
+
+  it("does NOT set a privacy timestamp when acknowledgement is absent/false", async () => {
+    const result = await createLead({
+      input: { ...base, kind: "enterprise", structured: { enquiryType: "partnership", privacyAcknowledged: false } },
+    });
+    expect(result.ok).toBe(true);
+    expect(store.tables.enquiries[0].privacyAcknowledgedAt).toBeNull();
+  });
 });
 
 describe("listOwnLeads", () => {

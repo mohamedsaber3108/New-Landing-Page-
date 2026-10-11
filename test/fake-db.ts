@@ -184,6 +184,26 @@ export class FakeStore {
     };
   }
 
+  /**
+   * Mimic D1/Drizzle `db.batch([...])`: execute each prepared statement in
+   * order, atomically from the caller's perspective. The statements here are
+   * the thenable chains returned by insert().values(); awaiting each runs it.
+   * On any failure, roll back to the pre-batch snapshot.
+   */
+  async batch(statements: Array<PromiseLike<unknown>>): Promise<unknown[]> {
+    const snapshot = structuredClone(this.tables);
+    const snapSeq = { ...this.seq };
+    try {
+      const results: unknown[] = [];
+      for (const stmt of statements) results.push(await stmt);
+      return results;
+    } catch (e) {
+      this.tables = snapshot;
+      this.seq = snapSeq;
+      throw e;
+    }
+  }
+
   async transaction<T>(cb: (tx: FakeStore) => Promise<T>): Promise<T> {
     // Snapshot for rollback on throw (good enough for our single-writer tests).
     const snapshot = structuredClone(this.tables);

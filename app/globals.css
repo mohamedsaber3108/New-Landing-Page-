@@ -90,3 +90,15 @@
 .explore-result h3{font-size:1.02rem;letter-spacing:-.03em;margin:0}
 .explore-result p{font-size:.82rem;line-height:1.5;color:var(--ink-soft);margin:0}
 .explore-result .product-link{justify-self:start;margin-top:4px}
+
+/* Structured enterprise/government enquiry forms. Builds on .lead-form; uses theme tokens for light/dark and logical props for RTL. */
+.enquiry-cta{margin:24px 0 0}
+.enquiry-cta .primary-button{display:inline-flex}
+.enquiry-anchor{scroll-margin-block-start:100px;margin-top:40px}
+.enquiry-form .enquiry-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.enquiry-form .enquiry-grid>label{display:grid;gap:6px;font-size:.8rem;font-weight:760;color:var(--ink)}
+.enquiry-form .enquiry-grid+label{display:grid;gap:6px;font-size:.8rem;font-weight:760;color:var(--ink);margin-top:16px}
+.enquiry-form input,.enquiry-form select,.enquiry-form textarea{font:inherit;border:1px solid var(--line-strong);border-radius:11px;padding:11px 12px;background:var(--surface);color:var(--ink);outline-color:var(--accent);width:100%}
+.enquiry-form textarea{resize:vertical;line-height:1.5}
+.enquiry-form .field-optional{font-weight:500;color:var(--ink-soft);font-size:.72rem}
+@media (max-width:640px){.enquiry-form .enquiry-grid{grid-template-columns:1fr}}

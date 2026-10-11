@@ -6,8 +6,13 @@ import { z } from "zod";
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
+  BUDGET_RANGES,
   ENQUIRY_KINDS,
   ENQUIRY_PRODUCTS,
+  ENTERPRISE_ENQUIRY_TYPES,
+  GOVERNMENT_INITIATIVE_TYPES,
+  PARTICIPANT_RANGES,
+  TIMELINE_OPTIONS,
   enquiries,
   outboxEvents,
 } from "@/db/schema";
@@ -24,9 +29,37 @@ export const LEADS_SCOPE = "POST /api/v1/leads";
 
 const localeSchema = z.enum(["en", "ar"]).default("en").catch("en");
 
+// Structured enterprise/government enquiry type (one combined enum keeps the
+// column flexible; the forms constrain which values they send).
+const enquiryTypeSchema = z
+  .enum([...ENTERPRISE_ENQUIRY_TYPES, ...GOVERNMENT_INITIATIVE_TYPES] as [string, ...string[]])
+  .nullish();
+
+/**
+ * Optional structured block for enterprise/government enquiries. Every field is
+ * optional so the Contact form (which omits `structured` entirely) is
+ * unaffected. Controlled vocabularies are validated against the schema enums;
+ * free-ish fields are length-bounded.
+ */
+export const structuredEnquirySchema = z
+  .object({
+    role: z.string().trim().max(120).nullish(),
+    phone: z.string().trim().max(40).nullish(),
+    country: z.string().trim().max(80).nullish(),
+    enquiryType: enquiryTypeSchema,
+    participantRange: z.enum(PARTICIPANT_RANGES).nullish(),
+    timeline: z.enum(TIMELINE_OPTIONS).nullish(),
+    budgetRange: z.enum(BUDGET_RANGES).nullish(),
+    beneficiaries: z.string().trim().max(600).nullish(),
+    privacyNoticeVersion: z.string().trim().max(40).nullish(),
+    privacyAcknowledged: z.boolean().optional(),
+  })
+  .strict();
+
 /**
  * Canonical lead payload (handoff section 14.1). `kind` is the canonical field;
- * the alias maps its legacy `category` onto it before calling in.
+ * the alias maps its legacy `category` onto it before calling in. `structured`
+ * is optional and only used by the enterprise/government forms.
  */
 export const createLeadSchema = z.object({
   name: z.string().trim().min(2, "name must be at least 2 characters").max(120),
@@ -41,6 +74,7 @@ export const createLeadSchema = z.object({
     .min(10, "message must be at least 10 characters")
     .max(4000),
   marketingOptIn: z.boolean().default(false).catch(false),
+  structured: structuredEnquirySchema.optional(),
 });
 
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
@@ -147,10 +181,18 @@ export async function createLead(args: {
   // --- Durable write: lead + outbox event in one transaction ---------------
   const reference = newReference();
   const eventId = `evt_${cryptoRandomId(20)}`;
+  const s = input.structured;
+  // Record the privacy acknowledgement timestamp only when the submitter
+  // actually acknowledged (structured forms). Null for the Contact form.
+  const privacyAcknowledgedAt = s?.privacyAcknowledged ? new Date().toISOString() : null;
 
+  // Cloudflare D1 does NOT support Drizzle's interactive db.transaction()
+  // (it throws at runtime). D1 provides atomic multi-statement writes via
+  // db.batch([...]) — the whole batch commits or rolls back together. We write
+  // the lead row and its lead.created outbox event as one atomic batch.
   try {
-    await db.transaction(async (tx) => {
-      await tx.insert(enquiries).values({
+    await db.batch([
+      db.insert(enquiries).values({
         reference,
         userId: user?.userId ?? null,
         name: input.name,
@@ -162,9 +204,20 @@ export async function createLead(args: {
         message: input.message,
         marketingOptIn: input.marketingOptIn,
         status: "received",
-      });
-
-      await tx.insert(outboxEvents).values({
+        // Structured fields (null for the Contact form).
+        role: s?.role ?? null,
+        phone: s?.phone ?? null,
+        country: s?.country ?? null,
+        enquiryType: s?.enquiryType ?? null,
+        participantRange: s?.participantRange ?? null,
+        timeline: s?.timeline ?? null,
+        budgetRange: s?.budgetRange ?? null,
+        beneficiaries: s?.beneficiaries ?? null,
+        privacyNoticeVersion: s?.privacyNoticeVersion ?? null,
+        privacyAcknowledgedAt,
+        details: null,
+      }),
+      db.insert(outboxEvents).values({
         eventId,
         eventType: "lead.created",
         schemaVersion: 1,
@@ -177,8 +230,8 @@ export async function createLead(args: {
           locale: input.locale,
         }),
         status: "pending",
-      });
-    });
+      }),
+    ]);
   } catch (error) {
     return dependencyError(error);
   }
@@ -216,6 +269,12 @@ export async function listOwnLeads(): Promise<
         reference: enquiries.reference,
         kind: enquiries.kind,
         product: enquiries.product,
+        organization: enquiries.organization,
+        enquiryType: enquiries.enquiryType,
+        country: enquiries.country,
+        participantRange: enquiries.participantRange,
+        timeline: enquiries.timeline,
+        budgetRange: enquiries.budgetRange,
         status: enquiries.status,
         locale: enquiries.locale,
         createdAt: enquiries.createdAt,

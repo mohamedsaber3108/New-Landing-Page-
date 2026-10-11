@@ -38,6 +38,49 @@ export const ENQUIRY_PRODUCTS = [
   "ecosystem",
 ] as const;
 
+/** Enterprise enquiry types (structured form on /for-enterprises). */
+export const ENTERPRISE_ENQUIRY_TYPES = [
+  "hiring",
+  "workforce-development",
+  "project-expertise",
+  "partnership",
+  "other",
+] as const;
+
+/** Government initiative types (structured form on /government). */
+export const GOVERNMENT_INITIATIVE_TYPES = [
+  "learning-program",
+  "talent-development",
+  "youth-program",
+  "innovation-partnership",
+  "other",
+] as const;
+
+/** Controlled ranges/timelines (shared, forward-compatible as text). */
+export const PARTICIPANT_RANGES = [
+  "1-10",
+  "11-50",
+  "51-200",
+  "201-1000",
+  "1000+",
+] as const;
+
+export const TIMELINE_OPTIONS = [
+  "immediate",
+  "1-3-months",
+  "3-6-months",
+  "6-12-months",
+  "not-decided",
+] as const;
+
+export const BUDGET_RANGES = [
+  "under-10k",
+  "10k-50k",
+  "50k-250k",
+  "250k-plus",
+  "prefer-to-discuss",
+] as const;
+
 /**
  * Lead lifecycle states (handoff section 14.1):
  * received → triaged → assigned → in_progress → resolved/closed.
@@ -77,6 +120,27 @@ export const enquiries = sqliteTable(
       .default(false),
     // One of LEAD_STATUSES — triage state.
     status: text("status").notNull().default("received"),
+
+    // --- Structured enterprise/government enquiry fields (all nullable so
+    // existing rows and the Contact form remain valid). Added in migration
+    // 0003; the Contact form leaves these null. ---
+    role: text("role"),
+    phone: text("phone"),
+    country: text("country"),
+    // Enterprise: one of ENTERPRISE_ENQUIRY_TYPES.
+    // Government: one of GOVERNMENT_INITIATIVE_TYPES. Stored as text.
+    enquiryType: text("enquiry_type"),
+    participantRange: text("participant_range"),
+    timeline: text("timeline"),
+    budgetRange: text("budget_range"),
+    beneficiaries: text("beneficiaries"),
+    // Privacy acknowledgement provenance (handoff: record version + timestamp).
+    privacyNoticeVersion: text("privacy_notice_version"),
+    privacyAcknowledgedAt: text("privacy_acknowledged_at"),
+    // Validated structured overflow for any additional captured fields; JSON
+    // string. Never a dumping ground for the message body.
+    details: text("details"),
+
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [
