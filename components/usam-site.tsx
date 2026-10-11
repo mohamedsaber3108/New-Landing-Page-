@@ -3,11 +3,12 @@
 // Primary navigation uses plain <a> anchors (see components/nav-link.tsx) so
 // links always navigate even if client hydration is incomplete.
 import Link from "./nav-link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ArrowLeft, ArrowRight, ArrowUpRight, Baby, Blocks, Bot, BriefcaseBusiness, Building2, CheckCircle2, Globe2, GraduationCap, Info, Landmark, Menu, Moon, Network, Route, Search, Send, ShieldCheck, Sparkles, Sun, UserRound, X } from "lucide-react";
 import { ResearchLanding, GuideConnector } from "./research-landing";
 import { PageContent } from "./page-content";
+import { NavMenu, MobileNavSection } from "./nav-menu";
 import { products, routes, type Product, type ProductId, trustedDomain } from "@/data/products";
 
 type RouteKind = "home" | "info";
@@ -44,12 +45,51 @@ const focusByPage: Record<string, ProductId[]> = { "for-individuals": ["educatio
 function Mark() { return <span className="brand-logo"><img src="/brand/usam-wordmark.png" width="1000" height="559" alt="USAM" /></span>; }
 function ProductLink({ product, locale, compact = false }: { product: Product; locale: Locale; compact?: boolean }) { return <a className={compact ? "product-link compact" : "product-link"} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{locale === "ar" ? product.arabicCta : product.cta}</a>; }
 
+type SectionId = "individuals" | "enterprises" | "government" | "explore" | "ecosystem";
+
 function Nav({ locale, setLocale, theme, setTheme, onGuide }: { locale: Locale; setLocale: (value: Locale) => void; theme: "light" | "dark"; setTheme: (value: "light" | "dark") => void; onGuide: () => void }) {
-  const [open, setOpen] = useState(false); const t = copy[locale];
-  useEffect(() => { const close = (event: KeyboardEvent) => { if(event.key === "Escape") setOpen(false); }; window.addEventListener("keydown",close); return () => window.removeEventListener("keydown",close); }, []);
-  const navItems = [{ label: t.individuals, href: "/for-individuals", icon: UserRound }, { label: t.enterprises, href: "/for-enterprises", icon: Building2 }, { label: t.government, href: "/government", icon: Landmark }, { label: t.explore, href: "/explore", icon: Search }, { label: t.ecosystem, href: "/ecosystem", icon: Network }];
+  const [open, setOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null); // desktop mega-menu
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const [hoverEnabled, setHoverEnabled] = useState(false);
+  const t = copy[locale];
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Enable hover-to-open only on devices with a real hover-capable pointer.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      setHoverEnabled(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+    }
+  }, []);
+
+  // Close the mobile menu on Escape; close the desktop mega-menu on Escape too.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); setOpenMenu(null); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Close the desktop mega-menu on outside click / focus leaving the header.
+  useEffect(() => {
+    if (!openMenu) return;
+    const onDown = (e: MouseEvent) => { if (!headerRef.current?.contains(e.target as Node)) setOpenMenu(null); };
+    const onFocus = (e: FocusEvent) => { if (!headerRef.current?.contains(e.target as Node)) setOpenMenu(null); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("focusin", onFocus);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("focusin", onFocus); };
+  }, [openMenu]);
+
+  const navItems: { id: SectionId; label: string }[] = [
+    { id: "individuals", label: t.individuals },
+    { id: "enterprises", label: t.enterprises },
+    { id: "government", label: t.government },
+    { id: "explore", label: t.explore },
+    { id: "ecosystem", label: t.ecosystem },
+  ];
   const productsMenu = [{ id: "education", icon: GraduationCap }, { id: "career", icon: BriefcaseBusiness }, { id: "freelancing", icon: Blocks }, { id: "kids", icon: Baby }] as const;
-  return <><a className="skip-link" href="#main-content">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a><header className="site-header section-shell"><Link href="/" className="brand" aria-label="USAM home"><Mark /></Link><nav className="desktop-nav" aria-label="Main navigation">{navItems.map((item) => { const Icon = item.icon; return <Link href={item.href} key={item.href}><Icon size={15} /><span>{item.label}</span></Link>; })}</nav><div className="nav-actions"><button className="guide-trigger" onClick={onGuide}><Sparkles size={16} />{t.ask}</button><button className="locale-button" onClick={() => setLocale(locale === "en" ? "ar" : "en")}><Globe2 size={16} />{t.language}</button><button className="icon-button" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label={theme === "light" ? t.dark : t.light}>{theme === "light" ? <Moon size={17} /> : <Sun size={17} />}</button><button className="menu-button" onClick={() => setOpen(!open)} aria-label={locale === "ar" ? "قائمة التنقل" : "Navigation menu"} aria-expanded={open}>{open ? <X /> : <Menu />}</button></div>{open && <nav className="mobile-nav" aria-label={locale === "ar" ? "التنقل على الهاتف" : "Mobile navigation"}>{[...navItems, { label: locale === "ar" ? "الأطفال وأولياء الأمور" : "Kids & Parents", href: "/kids", icon: Baby }, { label: locale === "ar" ? "عن يوزم" : "About", href: "/about", icon: Info }, { label: t.how, href: "/how-it-works", icon: Route }].map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><span><Icon size={17} />{item.label}</span></Link>; })}</nav>}</header><nav className="discovery-strip" aria-label="Product destinations"><div className="section-shell">{productsMenu.map(({ id, icon: Icon }) => { const product = products.find((item) => item.id === id)!; return <a href={trustedDomain(product.domain)} target="_blank" rel="noreferrer" key={id}><Icon size={15} /><span>{locale === "ar" ? product.arabicName : product.name}</span></a>; })}<button onClick={onGuide}><Bot size={15} />{locale === "ar" ? "لا تعرف من أين تبدأ؟" : "Not sure where to start?"}</button></div></nav></>;
+  const closeMobile = () => { setOpen(false); setMobileExpanded(null); };
+
+  return <><a className="skip-link" href="#main-content">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a><header ref={headerRef} className="site-header section-shell" onMouseLeave={() => setOpenMenu(null)}><Link href="/" className="brand" aria-label="USAM home"><Mark /></Link><nav className="desktop-nav" aria-label="Main navigation">{navItems.map((item) => <NavMenu key={item.id} section={item.id} label={item.label} locale={locale} openId={openMenu} setOpenId={setOpenMenu} hoverEnabled={hoverEnabled} />)}</nav><div className="nav-actions"><button className="guide-trigger" onClick={onGuide}><Sparkles size={16} />{t.ask}</button><button className="locale-button" onClick={() => setLocale(locale === "en" ? "ar" : "en")}><Globe2 size={16} />{t.language}</button><button className="icon-button" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label={theme === "light" ? t.dark : t.light}>{theme === "light" ? <Moon size={17} /> : <Sun size={17} />}</button><button className="menu-button" onClick={() => setOpen(!open)} aria-label={locale === "ar" ? "قائمة التنقل" : "Navigation menu"} aria-expanded={open}>{open ? <X /> : <Menu />}</button></div>{open && <nav className="mobile-nav" aria-label={locale === "ar" ? "التنقل على الهاتف" : "Mobile navigation"}>{navItems.map((item) => <MobileNavSection key={item.id} section={item.id} label={item.label} locale={locale} expanded={mobileExpanded === item.id} setExpanded={setMobileExpanded} onNavigate={closeMobile} />)}<div className="mobile-nav-extra">{[{ label: locale === "ar" ? "الأطفال وأولياء الأمور" : "Kids & Parents", href: "/kids", icon: Baby }, { label: locale === "ar" ? "عن يوزم" : "About", href: "/about", icon: Info }, { label: t.how, href: "/how-it-works", icon: Route }].map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={closeMobile}><span><Icon size={17} />{item.label}</span></Link>; })}</div></nav>}</header><nav className="discovery-strip" aria-label="Product destinations"><div className="section-shell">{productsMenu.map(({ id, icon: Icon }) => { const product = products.find((item) => item.id === id)!; return <a href={trustedDomain(product.domain)} target="_blank" rel="noreferrer" key={id}><Icon size={15} /><span>{locale === "ar" ? product.arabicName : product.name}</span></a>; })}<button onClick={onGuide}><Bot size={15} />{locale === "ar" ? "لا تعرف من أين تبدأ؟" : "Not sure where to start?"}</button></div></nav></>;
 }
 
 function Home({ locale, onGuide }: { locale: Locale; onGuide: () => void }) { const isArabic = locale === "ar"; return <ResearchLanding locale={locale} onGuide={onGuide} hero={<section className="hero-reframe section-shell"><div className="hero-intro"><span className="hero-kicker"><i />{isArabic ? "البوابة الذكية لمنظومة يوزم" : "THE INTELLIGENT FRONT DOOR"}</span><h1>{isArabic ? <>ابدأ بهدفك.<br /><em>واترك الباقي</em><br />يوضح الطريق.</> : <>Start with your goal.<br /><em>Let the system</em><br />clarify the path.</>}</h1><p>{isArabic ? "يوزم تربط بين التعلّم والمسار المهني والعمل الحر واكتشاف الأطفال. صف ما تحاول تحقيقه، ثم انتقل مباشرة إلى التجربة المناسبة." : "USAM connects learning, career growth, independent work, and early discovery. Describe what you are trying to achieve and move directly to the right experience."}</p><div className="hero-actions"><button className="primary-button" onClick={onGuide}><Sparkles size={18} />{isArabic ? "صف حالتك" : "Describe your situation"}</button><a className="quiet-button" href="#ecosystem">{isArabic ? "شاهد كيف تتصل المنظومة" : "See how the ecosystem connects"}</a></div></div><div className="hero-route-card"><div className="route-card-head"><span>{isArabic ? "كيف تبدأ" : "HOW YOU START"}</span><b>{isArabic ? "من هدف إلى خطوة" : "From goal to next step"}</b></div><div className="route-lanes"><div><span>01</span><strong>{isArabic ? "صف ما تحتاجه" : "Describe what you need"}</strong><p>{isArabic ? "بكلماتك، لا باسم منتج." : "In your own words, not by product name."}</p></div><div><span>02</span><strong>{isArabic ? "اكتشف التجربة المناسبة" : "Discover the right experience"}</strong><p>{isArabic ? "تعليم، مسار مهني، عمل حر، أو أطفال." : "Education, career, freelancing, or kids."}</p></div><div><span>03</span><strong>{isArabic ? "اتخذ الخطوة التالية" : "Take the next step"}</strong><p>{isArabic ? "بدليل متخصص داخل المنتج." : "With a specialist guide inside the product."}</p></div></div></div></section>} />; }
