@@ -6,6 +6,10 @@ import { products, routes } from "@/data/products";
 import { ContactLeadForm } from "./contact-lead-form";
 import { ExploreSearch } from "./explore-search";
 import { EnquiryForm } from "./enquiry-form";
+import { LegalCenter, LegalPolicy } from "./legal-content";
+import { POLICY_TYPES, type PolicyType } from "@/lib/legal/policies";
+
+const LEGAL_SLUGS = new Set<string>(POLICY_TYPES);
 
 type Locale = "en" | "ar";
 type Section = [string, string, string, string];
@@ -39,6 +43,7 @@ const content: Record<string, Section[]> = {
  ["Meet Azouz", "Continue in USAM Kids to discover the specialist learning experience and its guide.", "تعرّف على عزوز", "انتقل إلى يوزم للأطفال لاستكشاف تجربة التعلم ودليلها المتخصص."]],
  pricing: [
  ["Choose the product first", "Plans and available features are managed by each platform. Open your destination and review its current offer before purchasing.", "اختر المنتج أولًا", "تدير كل منصة الخطط والمزايا المتاحة. افتح وجهتك وراجع عرضها الحالي قبل الشراء."],
+ ["Currency and prices", "The base currency for USAM-owned pricing is the Egyptian Pound (EGP). This website does not sell or take payment and does not invent prices. Any figure in another currency is an estimate, not the final charge — the final amount, currency, taxes and fees are shown on the selling platform before you pay. See Payment Security & Currency.", "العملة والأسعار", "العملة الأساسية لتسعير يوزم هي الجنيه المصري (EGP). ولا يبيع هذا الموقع ولا يستقبل مدفوعات ولا يخترع أسعارًا. وأي مبلغ بعملة أخرى هو تقدير وليس المبلغ النهائي — ويُعرض المبلغ النهائي وعملته والضرائب والرسوم على المنصة البائعة قبل الدفع. راجع «أمان الدفع والعملة»."],
  ["For organizations", "Specify the number of participants, required services, and delivery period when discussing a custom scope.", "للمؤسسات", "حدّد عدد المشاركين والخدمات المطلوبة ومدة التنفيذ عند مناقشة نطاق مخصص."]],
  contact: [
  ["Product help", "Open the platform where you need help and use its support channel. Include the page, what happened, and the result you expected.", "مساعدة في منتج", "افتح المنصة التي تحتاج المساعدة فيها واستخدم قناة دعمها. وضّح الصفحة وما حدث والنتيجة المتوقعة."],
@@ -78,6 +83,11 @@ export function SiteDirectory({locale}:{locale:Locale}) {
 }
 export function PageContent({slug,locale,onGuide}:{slug:string;locale:Locale;onGuide:()=>void}) {
  const ar=locale==="ar"; const [query,setQuery]=useState("");
+ // Legal Center + policy pages render their own structured content (ToC,
+ // anchored sections, embedded cookie settings / privacy-request form) and must
+ // NOT show the product grid or guide CTA.
+ if (slug==="legal") return <div className="page-details"><LegalCenter locale={locale}/></div>;
+ if (LEGAL_SLUGS.has(slug)) return <div className="page-details"><LegalPolicy type={slug as PolicyType} locale={locale}/></div>;
  const focused=products.filter(p=>slug==="kids"?p.id==="kids":slug==="for-talent"?["career","freelancing"].includes(p.id):true);
  const matches=focused.filter(p=>(ar?p.arabicName+" "+p.arabicFeatures.join(" "):p.name+" "+p.features.join(" ")).toLowerCase().includes(query.toLowerCase()));
  return <div className="page-details">

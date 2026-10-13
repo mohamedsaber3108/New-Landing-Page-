@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ENQUIRY_KINDS, ENQUIRY_PRODUCTS } from "@/db/schema";
+import { AcceptanceFields, useLegalRequirements } from "./legal-acceptance";
 
 type Locale = "en" | "ar";
 
@@ -23,7 +24,6 @@ const t = {
     none: "Not specific",
     message: "Message",
     messageHint: "Describe what you want to achieve. Do not include passwords or payment details.",
-    marketing: "Send me occasional product updates (optional)",
     submit: "Send enquiry",
     submitting: "Sending…",
     successTitle: "Enquiry received",
@@ -46,7 +46,6 @@ const t = {
     none: "غير محدد",
     message: "الرسالة",
     messageHint: "صف ما تريد تحقيقه. لا تُدرج كلمات المرور أو بيانات الدفع.",
-    marketing: "أرسلوا لي تحديثات المنتج أحيانًا (اختياري)",
     submit: "إرسال الاستفسار",
     submitting: "جارٍ الإرسال…",
     successTitle: "تم استلام الاستفسار",
@@ -64,6 +63,7 @@ export function ContactLeadForm({ locale }: { locale: Locale }) {
   const L = t[locale];
   const ar = locale === "ar";
   const [state, setState] = useState<FormState>({ kind: "idle" });
+  const requirements = useLegalRequirements();
   // One idempotency key per form instance until a submission succeeds, so a
   // double-click or a network retry cannot create duplicate leads.
   const idempotencyKey = useRef<string>(crypto.randomUUID());
@@ -83,6 +83,17 @@ export function ContactLeadForm({ locale }: { locale: Locale }) {
       locale,
       message: String(data.get("message") ?? "").trim(),
       marketingOptIn: data.get("marketingOptIn") === "on",
+      // Accurate acceptance signals. The server derives whether Terms are
+      // actually required (published) and records evidence against the SERVER's
+      // version — it does not trust a client version string. When Terms are
+      // published, the required checkbox named `terms` carries the acceptance;
+      // when draft, there is no checkbox and the server records notice
+      // presentation only. `privacyAcknowledged` mirrors a published Terms tick.
+      structured: {
+        termsPresented: requirements.terms.published,
+        termsAccepted: data.get("terms") === "on",
+        privacyAcknowledged: requirements.privacy.published && data.get("terms") === "on",
+      },
     };
 
     setState({ kind: "submitting" });
@@ -181,10 +192,7 @@ export function ContactLeadForm({ locale }: { locale: Locale }) {
           <textarea name="message" required minLength={10} maxLength={4000} rows={5} />
           <span className="lead-hint">{L.messageHint}</span>
         </label>
-        <label className="lead-checkbox">
-          <input name="marketingOptIn" type="checkbox" />
-          <span>{L.marketing}</span>
-        </label>
+        <AcceptanceFields locale={locale} requirements={requirements} />
         <button className="primary-button" type="submit" disabled={submitting} aria-busy={submitting}>
           {submitting ? L.submitting : L.submit}
         </button>

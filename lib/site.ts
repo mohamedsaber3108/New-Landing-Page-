@@ -24,8 +24,13 @@ export const SITEMAP_PATHS = [
   "/trust",
   "/faq",
   "/guide",
+  "/legal",
   "/privacy",
   "/terms",
   "/cookies",
+  "/refunds",
+  "/payments",
+  "/ai-use",
+  "/privacy-requests",
   "/status",
 ] as const;

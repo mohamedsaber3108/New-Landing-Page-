@@ -34,7 +34,7 @@ const base = {
 
 describe("createLead", () => {
   beforeEach(() => {
-    store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [] };
+    store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [] };
     userRef.current = null;
   });
 
@@ -120,7 +120,7 @@ describe("createLead", () => {
     expect(lead.budgetRange).toBeNull();
   });
 
-  it("persists structured enterprise fields and records privacy acknowledgement timestamp", async () => {
+  it("persists structured enterprise fields; privacy provenance is server-derived (null while draft)", async () => {
     const result = await createLead({
       input: {
         ...base,
@@ -134,6 +134,8 @@ describe("createLead", () => {
           participantRange: "51-200",
           timeline: "1-3-months",
           budgetRange: "50k-250k",
+          // Client sends a version, but privacy is NOT published, so the server
+          // records neither a version nor an acknowledgement timestamp.
           privacyNoticeVersion: "2026-01",
           privacyAcknowledged: true,
         },
@@ -149,8 +151,9 @@ describe("createLead", () => {
     expect(lead.participantRange).toBe("51-200");
     expect(lead.timeline).toBe("1-3-months");
     expect(lead.budgetRange).toBe("50k-250k");
-    expect(lead.privacyNoticeVersion).toBe("2026-01");
-    expect(typeof lead.privacyAcknowledgedAt).toBe("string"); // timestamp recorded
+    // Privacy is still a draft → no client version is trusted, no ack timestamp.
+    expect(lead.privacyNoticeVersion).toBeNull();
+    expect(lead.privacyAcknowledgedAt).toBeNull();
   });
 
   it("persists structured government fields incl. beneficiaries", async () => {
@@ -187,7 +190,7 @@ describe("createLead", () => {
 
 describe("listOwnLeads", () => {
   beforeEach(() => {
-    store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [] };
+    store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [] };
     userRef.current = null;
   });
 
@@ -227,7 +230,7 @@ describe("listOwnLeads", () => {
 
 describe("listAllLeads (staff inbox)", () => {
   beforeEach(() => {
-    store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [] };
+    store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [] };
     userRef.current = null;
   });
 
@@ -263,5 +266,106 @@ describe("listAllLeads (staff inbox)", () => {
       expect(res.leads.length).toBe(1);
       expect(res.leads[0].kind).toBe("government");
     }
+  });
+});
+
+describe("consent + terms acceptance (draft vs published)", () => {
+  beforeEach(() => {
+    store.tables = {
+      enquiries: [],
+      idempotency_keys: [],
+      outbox_events: [],
+      consent_events: [],
+      policy_publications: [],
+      privacy_requests: [],
+    };
+    userRef.current = null;
+  });
+
+  // Helper: mark a policy as consistently published in both locales at a shared
+  // version, mirroring what publishPolicy writes.
+  function publish(type: string, version: string) {
+    for (const locale of ["en", "ar"]) {
+      store.tables.policy_publications.push({
+        id: store.tables.policy_publications.length + 1,
+        policyType: type,
+        locale,
+        version,
+        status: "current",
+        materialChange: false,
+        effectiveAt: "2026-03-01",
+        content: "{}",
+        publishedBy: "test",
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  it("does NOT require Terms while they are draft; submission stays usable", async () => {
+    const result = await createLead({
+      input: { ...base, structured: { termsPresented: true, termsAccepted: false } },
+    });
+    expect(result.ok).toBe(true);
+    expect(store.tables.enquiries).toHaveLength(1);
+  });
+
+  it("records privacy_notice_presented (not acceptance) while policies are draft", async () => {
+    const result = await createLead({ input: { ...base, marketingOptIn: false } });
+    expect(result.ok).toBe(true);
+    const byType = store.tables.consent_events.map((e) => e.eventType).sort();
+    expect(byType).toEqual(["marketing_consent", "privacy_notice_presented"]);
+    expect(store.tables.consent_events.find((e) => e.eventType === "terms_acceptance")).toBeUndefined();
+    expect(store.tables.consent_events.find((e) => e.eventType === "privacy_acknowledgement")).toBeUndefined();
+  });
+
+  it("REQUIRES Terms once published, rejecting an unaccepted submission (422, no write)", async () => {
+    publish("terms", "2026-03-approved-1");
+    const result = await createLead({
+      input: { ...base, structured: { termsPresented: true, termsAccepted: false } },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.status).toBe(422);
+    expect(result.error.code).toBe("validation_failed");
+    expect(store.tables.enquiries).toHaveLength(0);
+    expect(store.tables.consent_events).toHaveLength(0);
+  });
+
+  it("records terms_acceptance against the SERVER's published version when accepted", async () => {
+    publish("terms", "2026-03-approved-1");
+    publish("privacy", "2026-03-approved-1");
+    const result = await createLead({
+      input: {
+        ...base,
+        kind: "enterprise",
+        marketingOptIn: true,
+        structured: { termsPresented: true, termsAccepted: true, privacyAcknowledged: true },
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const byType = store.tables.consent_events.map((e) => e.eventType).sort();
+    expect(byType).toEqual(["marketing_consent", "privacy_acknowledgement", "terms_acceptance"]);
+
+    const terms = store.tables.consent_events.find((e) => e.eventType === "terms_acceptance")!;
+    expect(terms.subjectRef).toBe(result.body.reference);
+    expect(terms.status).toBe("granted");
+    // Server-stamped version, NOT a client-supplied one.
+    expect(terms.policyVersion).toBe("2026-03-approved-1");
+  });
+
+  it("records marketing as DENIED (explicit decision) when the optional box is unchecked", async () => {
+    const result = await createLead({ input: { ...base, marketingOptIn: false } });
+    expect(result.ok).toBe(true);
+    const marketing = store.tables.consent_events.find((e) => e.eventType === "marketing_consent")!;
+    expect(marketing).toBeDefined();
+    expect(marketing.status).toBe("denied");
+  });
+
+  it("keeps the plain Contact submission (no structured block) working", async () => {
+    const result = await createLead({ input: base });
+    expect(result.ok).toBe(true);
+    expect(store.tables.enquiries).toHaveLength(1);
   });
 });

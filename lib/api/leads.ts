@@ -24,6 +24,8 @@ import {
   type FieldErrors,
 } from "./envelope";
 import { hashBody, reserveIdempotencyKey, type Db } from "./idempotency";
+import { consentInsertStatements, type RecordConsentInput } from "./consent";
+import { getPolicyRequirement } from "@/lib/legal/store";
 
 export const LEADS_SCOPE = "POST /api/v1/leads";
 
@@ -53,6 +55,12 @@ export const structuredEnquirySchema = z
     beneficiaries: z.string().trim().max(600).nullish(),
     privacyNoticeVersion: z.string().trim().max(40).nullish(),
     privacyAcknowledged: z.boolean().optional(),
+    // Terms-of-Service acceptance (required by the forms that show the box).
+    // Enforced server-side: when the client declares the box was shown
+    // (`termsPresented`), acceptance must be true or the request is rejected.
+    termsAccepted: z.boolean().optional(),
+    termsPresented: z.boolean().optional(),
+    termsVersion: z.string().trim().max(40).nullish(),
   })
   .strict();
 
@@ -128,6 +136,31 @@ export async function createLead(args: {
   idempotencyKey?: string | null;
 }): Promise<LeadResult> {
   const { input, idempotencyKey } = args;
+  const s0 = input.structured;
+
+  // Determine the REAL Terms requirement from the published state — never from
+  // the client. The Master may only require (and record) Terms acceptance when
+  // an APPROVED, published Terms version exists consistently in EN and AR
+  // (instruction §1/§7). While Terms are still draft, submission must stay
+  // usable with a privacy NOTICE instead of a contractual acceptance gate, and
+  // no draft acceptance is recorded as valid.
+  const termsReq = await getPolicyRequirement("terms");
+
+  // Server-side enforcement: only when Terms are genuinely published do we
+  // require the box to be ticked. A client claiming termsPresented against a
+  // draft cannot create a bogus contractual record, and a client omitting it
+  // when Terms ARE published cannot bypass the requirement.
+  if (termsReq.required && s0?.termsAccepted !== true) {
+    return {
+      ok: false,
+      status: 422,
+      error: {
+        code: "validation_failed",
+        message: "You must accept the Terms of Service to continue.",
+        fieldErrors: { "structured.termsAccepted": ["Terms acceptance is required."] },
+      },
+    };
+  }
 
   const user = await getChatGPTUser().catch(() => null);
   const actor = user?.userId ?? "anonymous";
@@ -182,9 +215,78 @@ export async function createLead(args: {
   const reference = newReference();
   const eventId = `evt_${cryptoRandomId(20)}`;
   const s = input.structured;
-  // Record the privacy acknowledgement timestamp only when the submitter
-  // actually acknowledged (structured forms). Null for the Contact form.
-  const privacyAcknowledgedAt = s?.privacyAcknowledged ? new Date().toISOString() : null;
+  // Record a privacy ACKNOWLEDGEMENT timestamp only when the privacy policy is
+  // actually published AND the submitter acknowledged it. A draft notice that
+  // was merely presented is not an acknowledgement, so this stays null then.
+
+  // Build distinct consent/acceptance evidence events for this submission. They
+  // are written in the SAME batch as the lead so the evidence is atomic with
+  // the enquiry (ref 02 §5). Each event is accurate: we NEVER record acceptance
+  // of a draft as valid, and we NEVER mark marketing granted when unchecked.
+  const purpose = `${input.kind}_enquiry`;
+  const privacyReq = await getPolicyRequirement("privacy");
+  const consentInputs: RecordConsentInput[] = [];
+
+  // Terms: only recordable as acceptance when Terms are published. We stamp the
+  // SERVER's published version (termsReq.version), not a client-supplied one.
+  if (termsReq.required && s?.termsAccepted === true) {
+    consentInputs.push({
+      eventType: "terms_acceptance",
+      purpose,
+      status: "granted",
+      policyType: "terms",
+      policyVersion: termsReq.version,
+      actor,
+      subjectRef: reference,
+      method: `${input.kind}-form`,
+      locale: input.locale,
+    });
+  }
+
+  // Privacy: if the privacy policy is published, a ticked box is an
+  // acknowledgement; otherwise we only record that the privacy NOTICE was
+  // PRESENTED (a notice, not consent). Either way, stamp the server's version
+  // when published so evidence matches what was served.
+  if (privacyReq.required && s?.privacyAcknowledged === true) {
+    consentInputs.push({
+      eventType: "privacy_acknowledgement",
+      purpose,
+      status: "granted",
+      policyType: "privacy",
+      policyVersion: privacyReq.version,
+      actor,
+      subjectRef: reference,
+      method: `${input.kind}-form`,
+      locale: input.locale,
+    });
+  } else {
+    // Notice presentation is always recorded for a submission — it documents
+    // that the privacy notice link was shown, without implying consent.
+    consentInputs.push({
+      eventType: "privacy_notice_presented",
+      purpose,
+      status: "granted",
+      policyType: "privacy",
+      policyVersion: privacyReq.required ? privacyReq.version : null,
+      actor,
+      subjectRef: reference,
+      method: `${input.kind}-form`,
+      locale: input.locale,
+    });
+  }
+
+  // Marketing is always recorded as a distinct event: granted when opted in,
+  // denied when the (unchecked) optional box was left off — so a later audit
+  // shows an explicit decision, and withdrawal can supersede it.
+  consentInputs.push({
+    eventType: "marketing_consent",
+    purpose: "marketing_updates",
+    status: input.marketingOptIn ? "granted" : "denied",
+    actor,
+    subjectRef: reference,
+    method: `${input.kind}-form`,
+    locale: input.locale,
+  });
 
   // Cloudflare D1 does NOT support Drizzle's interactive db.transaction()
   // (it throws at runtime). D1 provides atomic multi-statement writes via
@@ -213,8 +315,14 @@ export async function createLead(args: {
         timeline: s?.timeline ?? null,
         budgetRange: s?.budgetRange ?? null,
         beneficiaries: s?.beneficiaries ?? null,
-        privacyNoticeVersion: s?.privacyNoticeVersion ?? null,
-        privacyAcknowledgedAt,
+        // Server-derived: record the published privacy version served (or null
+        // if privacy is still draft), and an acknowledgement timestamp only
+        // when privacy is published AND the box was ticked.
+        privacyNoticeVersion: privacyReq.required ? privacyReq.version : null,
+        privacyAcknowledgedAt:
+          privacyReq.required && s?.privacyAcknowledged === true
+            ? new Date().toISOString()
+            : null,
         details: null,
       }),
       db.insert(outboxEvents).values({
@@ -231,6 +339,8 @@ export async function createLead(args: {
         }),
         status: "pending",
       }),
+      // Consent/acceptance evidence, atomic with the lead.
+      ...consentInsertStatements(db, consentInputs),
     ]);
   } catch (error) {
     return dependencyError(error);

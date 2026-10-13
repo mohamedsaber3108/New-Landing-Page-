@@ -86,39 +86,38 @@ export function publicFaqs(locale: Locale) {
 }
 
 /**
- * Legal documents (handoff C08). The current copy is PROVISIONAL navigational
- * text, not an approved notice. The API says so explicitly via `approval`.
+ * Legal documents (handoff C08 + Legal Implementation Pack). Content now comes
+ * from the central source of truth in lib/legal/policies, resolved through the
+ * admin publication store (lib/legal/store) so a reviewed/published version
+ * overrides the built-in draft. The `approval` field stays honest: "draft"
+ * until a human publishes it.
  */
-export const LEGAL_TYPES = ["privacy", "terms", "cookies"] as const;
-export type LegalType = (typeof LEGAL_TYPES)[number];
+import { POLICY_TYPES, type PolicyType } from "@/lib/legal/policies";
+import { resolvePolicy } from "@/lib/legal/store";
 
-const legalBodies: Record<LegalType, Section[]> = {
-  privacy: [
-    ["Your destination matters", "Each specialist platform may process different information. Review the privacy notice available within that platform before using its services.", "الوجهة تحدّد التفاصيل", "قد تتعامل كل منصة متخصصة مع معلومات مختلفة. راجع إشعار الخصوصية داخلها قبل استخدام خدماتها."],
-    ["Using the gateway", "The route selector matches your typed goal in this page. It is not a connected AI conversation. Do not enter sensitive information.", "استخدام البوابة", "يطابق محدّد المسار هدفك المكتوب داخل هذه الصفحة. وهو ليس محادثة متصلة بنموذج ذكاء اصطناعي. لا تُدخل معلومات حساسة."],
-  ],
-  terms: [
-    ["Gateway and product services", "USAM Master helps you find a destination. Access, subscriptions, payments, and service conditions belong to the product you enter.", "البوابة وخدمات المنتجات", "تساعدك يوزم الرئيسية على اختيار وجهة. ترتبط شروط الدخول والاشتراك والدفع والخدمة بالمنتج الذي تستخدمه."],
-    ["Before committing", "Review the destination's published terms, cancellation conditions, and privacy information. This directory does not replace those documents.", "قبل الالتزام", "راجع شروط الوجهة المنشورة وأحكام الإلغاء ومعلومات الخصوصية. لا يحل هذا الدليل محل تلك المستندات."],
-  ],
-  cookies: [
-    ["Website preferences", "Language and theme preferences are saved on this browser so they carry across visits and pages.", "تفضيلات الموقع", "تُحفظ اللغة والمظهر في هذا المتصفح بين الصفحات والزيارات."],
-    ["Browser controls", "Manage stored site data using your browser's privacy settings. Clearing data can sign you out of connected services.", "إعدادات المتصفح", "أدر بيانات المواقع المخزّنة من إعدادات الخصوصية في متصفحك. قد يؤدي مسح البيانات إلى تسجيل خروجك من الخدمات المتصلة."],
-  ],
-};
+// Backward-compatible alias: the original API accepted only these three. The
+// full set is POLICY_TYPES. Both are exported so existing callers keep working.
+export const LEGAL_TYPES = POLICY_TYPES;
+export type LegalType = PolicyType;
 
-export function publicLegal(type: LegalType, locale: Locale) {
+export async function publicLegal(type: LegalType, locale: Locale) {
+  const policy = await resolvePolicy(type, locale);
+  if (!policy) return null;
   return {
-    type,
+    type: policy.type,
     locale,
-    sections: legalBodies[type].map(([tEn, bEn, tAr, bAr]) => ({
-      title: locale === "ar" ? tAr : tEn,
-      body: locale === "ar" ? bAr : bEn,
+    title: policy.title,
+    scope: policy.scope,
+    appliesTo: policy.appliesTo,
+    sections: policy.sections.map((s) => ({
+      id: s.id,
+      title: s.heading,
+      body: s.body.join("\n\n"),
     })),
-    // Honest status: not an approved policy yet.
-    approval: "provisional" as const,
-    version: null as string | null,
-    effectiveAt: null as string | null,
+    approval: policy.approval,
+    version: policy.version,
+    effectiveAt: policy.effectiveAt,
+    updatedAt: policy.updatedAt,
   };
 }
 

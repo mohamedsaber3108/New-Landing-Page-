@@ -14,7 +14,7 @@
 // code builds. This is enough to test idempotency races, replay, body-mismatch
 // conflicts, and the lead+outbox transactional write without native modules.
 
-import { enquiries, idempotencyKeys, outboxEvents } from "@/db/schema";
+import { consentEvents, enquiries, idempotencyKeys, outboxEvents, policyPublications, privacyRequests } from "@/db/schema";
 
 type Row = Record<string, unknown>;
 
@@ -47,6 +47,9 @@ function ensureRegistry() {
   register("enquiries", enquiries as unknown as Record<string, unknown>);
   register("idempotency_keys", idempotencyKeys as unknown as Record<string, unknown>);
   register("outbox_events", outboxEvents as unknown as Record<string, unknown>);
+  register("consent_events", consentEvents as unknown as Record<string, unknown>);
+  register("policy_publications", policyPublications as unknown as Record<string, unknown>);
+  register("privacy_requests", privacyRequests as unknown as Record<string, unknown>);
   registryBuilt = true;
 }
 
@@ -61,6 +64,9 @@ function tableKey(table: unknown): string {
   if (table === enquiries) return "enquiries";
   if (table === idempotencyKeys) return "idempotency_keys";
   if (table === outboxEvents) return "outbox_events";
+  if (table === consentEvents) return "consent_events";
+  if (table === policyPublications) return "policy_publications";
+  if (table === privacyRequests) return "privacy_requests";
   throw new Error("Unknown table");
 }
 
@@ -69,12 +75,13 @@ function uniqueKey(table: string, row: Row): string | null {
   if (table === "idempotency_keys") return `${row.scope}\u0000${row.actor}\u0000${row.key}`;
   if (table === "enquiries") return row.reference != null ? `ref:${row.reference}` : null;
   if (table === "outbox_events") return row.eventId != null ? `evt:${row.eventId}` : null;
+  if (table === "privacy_requests") return row.reference != null ? `prq:${row.reference}` : null;
   return null;
 }
 
 export class FakeStore {
-  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [] };
-  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0 };
+  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [] };
+  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0, consent_events: 0, policy_publications: 0, privacy_requests: 0 };
 
   private matches(table: string, row: Row, pred: Pred): boolean {
     if (pred.kind === "and") return pred.parts.every((p) => this.matches(table, row, p));
@@ -90,7 +97,13 @@ export class FakeStore {
       if (existing) return null; // unique violation -> onConflictDoNothing
     }
     const row: Row = { ...values };
-    if (table === "enquiries" || table === "outbox_events") {
+    if (
+      table === "enquiries" ||
+      table === "outbox_events" ||
+      table === "consent_events" ||
+      table === "policy_publications" ||
+      table === "privacy_requests"
+    ) {
       if (row.id == null) row.id = ++this.seq[table];
     }
     if (row.createdAt == null) row.createdAt = new Date().toISOString();
@@ -178,10 +191,33 @@ export class FakeStore {
       set(patch: Row) {
         return {
           where(pred: Pred) {
+            const updated: Row[] = [];
             for (const row of store.tables[t]) {
-              if (store.matches(t, row, pred)) Object.assign(row, patch);
+              if (store.matches(t, row, pred)) {
+                Object.assign(row, patch);
+                updated.push(row);
+              }
             }
-            return Promise.resolve();
+            // Support both `await update()` and `update().returning(cols)`.
+            const result = {
+              returning(cols?: Record<string, unknown>) {
+                if (!cols) return Promise.resolve(updated.map((r) => ({ ...r })));
+                return Promise.resolve(
+                  updated.map((r) => {
+                    const out: Row = {};
+                    for (const [alias, col] of Object.entries(cols)) {
+                      const { name } = colName(col);
+                      out[alias] = r[name];
+                    }
+                    return out;
+                  }),
+                );
+              },
+              then(resolve: (v: unknown) => void) {
+                return resolve(undefined);
+              },
+            };
+            return result;
           },
         };
       },

@@ -18,12 +18,10 @@ import {
   PARTICIPANT_RANGES,
   TIMELINE_OPTIONS,
 } from "@/db/schema";
+import { AcceptanceFields, useLegalRequirements } from "./legal-acceptance";
 
 type Locale = "en" | "ar";
 type Variant = "enterprise" | "government";
-
-// Bump when the privacy notice materially changes; recorded with each lead.
-export const PRIVACY_NOTICE_VERSION = "2026-01";
 
 type FormState =
   | { kind: "idle" }
@@ -40,9 +38,6 @@ const common = {
     country: "Country",
     timeline: "Expected timeline",
     message: "Description",
-    privacy: "I acknowledge the",
-    privacyLink: "privacy notice",
-    privacyAfter: ".",
     submit: "Submit enquiry",
     submitting: "Submitting…",
     successTitle: "Enquiry received",
@@ -66,9 +61,6 @@ const common = {
     country: "الدولة",
     timeline: "الإطار الزمني المتوقع",
     message: "الوصف",
-    privacy: "أقر بـ",
-    privacyLink: "إشعار الخصوصية",
-    privacyAfter: ".",
     submit: "إرسال الطلب",
     submitting: "جارٍ الإرسال…",
     successTitle: "تم استلام الطلب",
@@ -132,7 +124,6 @@ const variantCopy = {
 } as const;
 
 export function EnquiryForm({ locale, variant }: { locale: Locale; variant: Variant }) {
-  const ar = locale === "ar";
   const C = common[locale];
   const V = variantCopy[variant][locale];
   const kind = variant === "enterprise" ? "enterprise" : "government";
@@ -140,6 +131,7 @@ export function EnquiryForm({ locale, variant }: { locale: Locale; variant: Vari
   const typeLabels = variantCopy[variant][locale].types;
 
   const [state, setState] = useState<FormState>({ kind: "idle" });
+  const requirements = useLegalRequirements();
   const idempotencyKey = useRef<string>(crypto.randomUUID());
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -153,6 +145,7 @@ export function EnquiryForm({ locale, variant }: { locale: Locale; variant: Vari
       return s === "" ? undefined : s;
     };
 
+    const accepted = data.get("terms") === "on";
     const structured: Record<string, unknown> = {
       role: val("role"),
       phone: val("phone"),
@@ -160,8 +153,14 @@ export function EnquiryForm({ locale, variant }: { locale: Locale; variant: Vari
       enquiryType: val("enquiryType"),
       participantRange: val("participantRange"),
       timeline: val("timeline"),
-      privacyNoticeVersion: PRIVACY_NOTICE_VERSION,
-      privacyAcknowledged: data.get("privacy") === "on",
+      // Accurate acceptance signals. The server derives the real requirement
+      // from the published policy state and records evidence against its own
+      // version; it does not trust a client version string. When Terms are
+      // draft there is no `terms` checkbox and the server records notice
+      // presentation only — submission stays usable.
+      termsPresented: requirements.terms.published,
+      termsAccepted: accepted,
+      privacyAcknowledged: requirements.privacy.published && accepted,
     };
     if (variant === "enterprise") structured.budgetRange = val("budgetRange");
     if (variant === "government") structured.beneficiaries = val("beneficiaries");
@@ -289,19 +288,7 @@ export function EnquiryForm({ locale, variant }: { locale: Locale; variant: Vari
           <textarea name="message" required minLength={10} maxLength={4000} rows={5} />
         </label>
 
-        <label className="lead-checkbox">
-          <input name="privacy" type="checkbox" required />
-          <span>
-            {C.privacy} <a href="/privacy" target="_blank" rel="noreferrer">{C.privacyLink}</a>{C.privacyAfter}
-          </span>
-        </label>
-
-        {variant === "enterprise" && (
-          <label className="lead-checkbox">
-            <input name="marketingOptIn" type="checkbox" />
-            <span>{variantCopy.enterprise[locale].marketing}</span>
-          </label>
-        )}
+        <AcceptanceFields locale={locale} requirements={requirements} />
 
         <button className="primary-button" type="submit" disabled={submitting} aria-busy={submitting}>
           {submitting ? C.submitting : C.submit}

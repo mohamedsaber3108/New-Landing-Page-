@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, Baby, Blocks, Bot, BriefcaseBusine
 import { ResearchLanding, GuideConnector } from "./research-landing";
 import { PageContent } from "./page-content";
 import { NavMenu, MobileNavSection } from "./nav-menu";
+import { CookieConsent, CookieSettingsModal, openCookieSettings } from "./cookie-consent";
 import { products, routes, type Product, type ProductId, trustedDomain } from "@/data/products";
 
 type RouteKind = "home" | "info";
@@ -34,9 +35,14 @@ const arabicRoutes: Record<string, { title: string; label: string; intro: string
   trust: { title: "حدود واضحة، وتجربة مسؤولة.", label: "الثقة", intro: "تعرّف على نهج يوزم تجاه الخصوصية والذكاء الاصطناعي وحدود المنتجات وسلامة الأطفال." },
   faq: { title: "إجابات واضحة قبل أن تبدأ.", label: "الأسئلة الشائعة", intro: "أسئلة عن المنظومة والمنتجات وأدلة الذكاء الاصطناعي والحسابات." },
   guide: { title: "أخبر يوزم بما تريد تحقيقه.", label: "دليل يوزم", intro: "الدليل يحدد أفضل نقطة دخول، ثم يكمل معك الدليل المتخصص داخل المنتج المناسب." },
-  privacy: { title: "الخصوصية في يوزم.", label: "قانوني", intro: "هذه الصفحة توصلك إلى معلومات الخصوصية المناسبة لكل منتج." },
-  terms: { title: "شروط يوزم.", label: "قانوني", intro: "هذه الصفحة توصلك إلى الشروط والأحكام المناسبة لكل منتج." },
-  cookies: { title: "خيارات ملفات الارتباط.", label: "قانوني", intro: "تفصل يوزم وظائف الموقع الضرورية عن اختيارات التحليلات الاختيارية." },
+  legal: { title: "مركز يوزم القانوني.", label: "المركز القانوني", intro: "كل سياسات موقع يوزم الرئيسي في مكان واحد، مع النطاق والإصدار وتاريخ السريان. أما شروط كل منصة فتوجد على المنصة نفسها." },
+  privacy: { title: "سياسة الخصوصية.", label: "قانوني", intro: "كيف يتعامل موقع يوزم الرئيسي مع معلوماتك." },
+  terms: { title: "شروط الاستخدام.", label: "قانوني", intro: "قواعد استخدام موقع يوزم الرئيسي. أما الشراء والحسابات فتتم على المنصات." },
+  cookies: { title: "سياسة ملفات الارتباط والإعدادات.", label: "قانوني", intro: "تخزين المتصفح الذي يستخدمه هذا الموقع، وأدوات لمراجعته أو تغييره." },
+  refunds: { title: "سياسة الاسترداد والإلغاء.", label: "قانوني", intro: "أين تتم المشتريات وكيف يُعالَج الاسترداد والإلغاء على المنصات." },
+  payments: { title: "أمان الدفع والعملة.", label: "قانوني", intro: "كيف وأين يتم الدفع، وكيف تُعرض العملة والأسعار." },
+  "ai-use": { title: "الذكاء الاصطناعي واستخدام البيانات.", label: "قانوني", intro: "ما يفعله دليل «اسأل يوزم» بما تكتبه، وكيف يُفصح عن الذكاء الاصطناعي في المنصات." },
+  "privacy-requests": { title: "طلبات الخصوصية والتواصل.", label: "قانوني", intro: "مارس حقوقك على البيانات التي يحتفظ بها هذا الموقع، مع التحقق من الهوية." },
   status: { title: "توافر المنتجات.", label: "الحالة", intro: "يحافظ كل منتج من منتجات يوزم على تجربته وحالته الخاصة." },
 };
 
@@ -100,7 +106,18 @@ function InfoPage({ slug, locale, onGuide }: { slug: string; locale: Locale; onG
  return <main id="main-content" className="page-experience section-shell"><section className="page-hero"><span>{detail.label}</span><h1>{detail.title}</h1><p>{detail.intro}</p></section><PageContent slug={slug} locale={locale} onGuide={onGuide} /></main>;
 }
 
-function Footer({ locale }: { locale: Locale }) { const isArabic = locale === "ar"; return <footer className="site-footer section-shell"><div><Mark /><p>{isArabic ? "تعلم · تطوّر · أنجز · اكتشف" : "Learn · Grow · Work · Discover"}</p></div><div><span>{isArabic ? "استكشف" : "Explore"}</span><Link href="/for-individuals">{copy[locale].individuals}</Link><Link href="/for-enterprises">{copy[locale].enterprises}</Link><Link href="/government">{copy[locale].government}</Link><Link href="/kids">{isArabic ? "الأطفال وأولياء الأمور" : "Kids & Parents"}</Link></div><div><span>{copy[locale].products}</span>{products.map((product) => <a key={product.id} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{isArabic ? product.arabicName : product.name}</a>)}</div><div><span>USAM</span><Link href="/about">{isArabic ? "عن يوزم" : "About"}</Link><Link href="/trust">{isArabic ? "الثقة" : "Trust"}</Link><Link href="/faq">{isArabic ? "الأسئلة الشائعة" : "FAQ"}</Link><Link href="/contact">{isArabic ? "تواصل" : "Contact"}</Link></div><nav className="footer-utility" aria-label={isArabic ? "روابط إضافية" : "Additional information"}>{[{href:"/how-it-works",en:"How it works",ar:"كيف تعمل يوزم"},{href:"/pricing",en:"Pricing",ar:"الأسعار"},{href:"/guide",en:"Guide",ar:"الدليل"},{href:"/privacy",en:"Privacy",ar:"الخصوصية"},{href:"/terms",en:"Terms",ar:"الشروط"},{href:"/cookies",en:"Preferences",ar:"التفضيلات"},{href:"/status",en:"Status",ar:"حالة الخدمات"}].map(l=><Link key={l.href} href={l.href}>{isArabic?l.ar:l.en}</Link>)}</nav><small>{isArabic ? "© 2026 يوزم. منظومة واحدة مترابطة." : "© 2026 USAM. One connected ecosystem."}</small></footer>; }
+function Footer({ locale }: { locale: Locale }) {
+  const isArabic = locale === "ar";
+  const legalLinks = [
+    { href: "/legal", en: "Legal Center", ar: "المركز القانوني" },
+    { href: "/privacy", en: "Privacy", ar: "الخصوصية" },
+    { href: "/terms", en: "Terms", ar: "الشروط" },
+    { href: "/cookies", en: "Cookies", ar: "ملفات الارتباط" },
+    { href: "/refunds", en: "Refunds & Cancellations", ar: "الاسترداد والإلغاء" },
+    { href: "/payments", en: "Payment Security", ar: "أمان الدفع" },
+  ];
+  return <footer className="site-footer section-shell"><div><Mark /><p>{isArabic ? "تعلم · تطوّر · أنجز · اكتشف" : "Learn · Grow · Work · Discover"}</p></div><div><span>{isArabic ? "استكشف" : "Explore"}</span><Link href="/for-individuals">{copy[locale].individuals}</Link><Link href="/for-enterprises">{copy[locale].enterprises}</Link><Link href="/government">{copy[locale].government}</Link><Link href="/kids">{isArabic ? "الأطفال وأولياء الأمور" : "Kids & Parents"}</Link></div><div><span>{copy[locale].products}</span>{products.map((product) => <a key={product.id} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{isArabic ? product.arabicName : product.name}</a>)}</div><div><span>USAM</span><Link href="/about">{isArabic ? "عن يوزم" : "About"}</Link><Link href="/trust">{isArabic ? "الثقة" : "Trust"}</Link><Link href="/faq">{isArabic ? "الأسئلة الشائعة" : "FAQ"}</Link><Link href="/contact">{isArabic ? "تواصل" : "Contact"}</Link></div><div className="footer-legal"><span>{isArabic ? "قانوني" : "Legal"}</span>{legalLinks.map((l) => <Link key={l.href} href={l.href}>{isArabic ? l.ar : l.en}</Link>)}<button type="button" className="footer-cookie-btn" onClick={() => openCookieSettings()}>{isArabic ? "إعدادات ملفات الارتباط" : "Cookie Settings"}</button></div><nav className="footer-utility" aria-label={isArabic ? "روابط إضافية" : "Additional information"}>{[{href:"/how-it-works",en:"How it works",ar:"كيف تعمل يوزم"},{href:"/pricing",en:"Pricing",ar:"الأسعار"},{href:"/guide",en:"Guide",ar:"الدليل"},{href:"/ai-use",en:"AI & Data Use",ar:"الذكاء الاصطناعي والبيانات"},{href:"/privacy-requests",en:"Privacy Requests",ar:"طلبات الخصوصية"},{href:"/status",en:"Status",ar:"حالة الخدمات"}].map(l=><Link key={l.href} href={l.href}>{isArabic?l.ar:l.en}</Link>)}</nav><small>{isArabic ? "© 2026 يوزم. منظومة واحدة مترابطة." : "© 2026 USAM. One connected ecosystem."}</small></footer>;
+}
 
 export function USAMSite({ kind = "home", slug }: { kind?: RouteKind; slug?: string }) {
   const [locale, setLocale] = useState<Locale>("en");
@@ -115,5 +132,5 @@ export function USAMSite({ kind = "home", slug }: { kind?: RouteKind; slug?: str
     document.documentElement.lang=locale; document.documentElement.dir=locale==="ar"?"rtl":"ltr"; document.documentElement.style.colorScheme=theme;
     if(ready)try { localStorage.setItem("usam-locale",locale);localStorage.setItem("usam-theme",theme); } catch {}
   }, [locale,theme,ready]);
-  return <div className={`usam-app theme-${theme} locale-${locale}`} dir={locale === "ar" ? "rtl" : "ltr"}><Nav locale={locale} setLocale={setLocale} theme={theme} setTheme={setTheme} onGuide={() => setGuideOpen(true)} />{kind === "home" ? <Home locale={locale} onGuide={() => setGuideOpen(true)} /> : <InfoPage slug={slug ?? "explore"} locale={locale} onGuide={() => setGuideOpen(true)} />}<Footer locale={locale} /><GuideConnector theme={theme} locale={locale} open={guideOpen} setOpen={setGuideOpen} /></div>;
+  return <div className={`usam-app theme-${theme} locale-${locale}`} dir={locale === "ar" ? "rtl" : "ltr"}><Nav locale={locale} setLocale={setLocale} theme={theme} setTheme={setTheme} onGuide={() => setGuideOpen(true)} />{kind === "home" ? <Home locale={locale} onGuide={() => setGuideOpen(true)} /> : <InfoPage slug={slug ?? "explore"} locale={locale} onGuide={() => setGuideOpen(true)} />}<Footer locale={locale} /><GuideConnector theme={theme} locale={locale} open={guideOpen} setOpen={setGuideOpen} /><CookieConsent locale={locale} /><CookieSettingsModal locale={locale} /></div>;
 }

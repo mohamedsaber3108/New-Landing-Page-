@@ -310,3 +310,179 @@ export const content_feedback = sqliteTable(
 
 export type ContentFeedback = typeof content_feedback.$inferSelect;
 export type NewContentFeedback = typeof content_feedback.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Legal / consent subsystem (Legal Implementation Pack)
+// ---------------------------------------------------------------------------
+
+/**
+ * Distinct consent/acceptance event kinds (reference 02 §3/§5). Each is recorded
+ * SEPARATELY — a single "I agree" is never used to cover everything.
+ *   terms_acceptance        — accepted the Terms of Use (required where shown).
+ *   privacy_acknowledgement — acknowledged the Privacy notice was presented.
+ *   marketing_consent       — optional opt-in to marketing (true) or withdrawal.
+ *   cookie_choice           — accept/reject/custom optional-cookie categories.
+ */
+export const CONSENT_EVENT_TYPES = [
+  "terms_acceptance",
+  "privacy_acknowledgement",
+  // Notice PRESENTATION (not consent): records that the privacy notice was
+  // shown at submission time. Distinct from an acknowledgement the user ticked,
+  // and never treated as consent for any processing purpose.
+  "privacy_notice_presented",
+  "marketing_consent",
+  "cookie_choice",
+] as const;
+
+/**
+ * Auditable consent / acceptance evidence. Answers WHAT / WHICH version / WHY /
+ * WHO / WHEN / HOW, while minimizing personal data: it stores an actor key
+ * (signed-in user id or "anonymous"), NOT a copy of the person's profile. For
+ * form-tied events, `subjectRef` links to the enquiry reference so staff can
+ * see the evidence beside the submission without duplicating personal fields.
+ */
+export const consentEvents = sqliteTable(
+  "consent_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // One of CONSENT_EVENT_TYPES.
+    eventType: text("event_type").notNull(),
+    // The processing purpose this event is about, e.g. "contact_enquiry",
+    // "enterprise_enquiry", "marketing_updates", "site_cookies".
+    purpose: text("purpose").notNull(),
+    // granted = accepted/opted-in; denied/withdrawn = rejected or later removed.
+    status: text("status").notNull().default("granted"),
+    // Which policy release this evidence is bound to (e.g. "2026-02-draft-1").
+    policyVersion: text("policy_version"),
+    // Which policy type (privacy/terms/cookies/...), when applicable.
+    policyType: text("policy_type"),
+    // Platform/context where consent was obtained ("master" for this website).
+    platform: text("platform").notNull().default("master"),
+    // Signed-in ChatGPT user id, else "anonymous". Minimal identifier only.
+    actor: text("actor").notNull().default("anonymous"),
+    // Optional link to the enquiry this acceptance accompanied (its reference).
+    subjectRef: text("subject_ref"),
+    // UI/source that captured it, e.g. "contact-form", "cookie-banner".
+    method: text("method"),
+    // "en" or "ar" at the moment of capture.
+    locale: text("locale").notNull().default("en"),
+    // For cookie_choice: JSON of category decisions (reference-only, no PII).
+    detail: text("detail"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("consent_events_type_idx").on(table.eventType),
+    index("consent_events_actor_idx").on(table.actor),
+    index("consent_events_subject_idx").on(table.subjectRef),
+    index("consent_events_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export type ConsentEvent = typeof consentEvents.$inferSelect;
+export type NewConsentEvent = typeof consentEvents.$inferInsert;
+
+/** Privacy / data-subject request lifecycle (reference 02 §10). */
+export const PRIVACY_REQUEST_TYPES = [
+  "access",
+  "correction",
+  "deletion",
+  "withdraw-consent",
+  "question",
+] as const;
+
+/**
+ * Lifecycle states. Deliberately gated on identity verification: a request can
+ * never move to fulfilment while unverified, so no data is disclosed or deleted
+ * on the strength of an email address alone.
+ */
+export const PRIVACY_REQUEST_STATUSES = [
+  "received",
+  "identity_verification",
+  "in_review",
+  "action_in_progress",
+  "completed",
+  "rejected",
+] as const;
+
+/**
+ * Privacy / data-subject requests submitted from the Privacy Requests page.
+ * Stores the minimum needed to contact the requester and act on the request;
+ * identity proof itself is handled out of band (never stored as raw documents
+ * here). Staff manage these through the protected admin endpoint.
+ */
+export const privacyRequests = sqliteTable(
+  "privacy_requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // Public receipt reference returned to the requester (e.g. PRQ-7F3K2Q).
+    reference: text("reference").notNull(),
+    // One of PRIVACY_REQUEST_TYPES.
+    requestType: text("request_type").notNull(),
+    // One of PRIVACY_REQUEST_STATUSES; starts "received".
+    status: text("status").notNull().default("received"),
+    // Whether identity has been verified by staff (gates fulfilment).
+    identityVerified: integer("identity_verified", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    // Optional reference the requester gives us to locate their data
+    // (e.g. a prior enquiry reference). Not a credential.
+    relatedReference: text("related_reference"),
+    locale: text("locale").notNull().default("en"),
+    // Bounded free text describing the request.
+    message: text("message"),
+    // Signed-in user id when available, else null.
+    userId: text("user_id"),
+    // Staff member the request is assigned to (admin-set).
+    assignedTo: text("assigned_to"),
+    // Internal staff note (admin-set); never shown publicly.
+    staffNote: text("staff_note"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("privacy_requests_reference_uq").on(table.reference),
+    index("privacy_requests_status_idx").on(table.status),
+    index("privacy_requests_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export type PrivacyRequest = typeof privacyRequests.$inferSelect;
+export type NewPrivacyRequest = typeof privacyRequests.$inferInsert;
+
+/**
+ * Published policy versions managed by staff (reference 02 §6). This is the
+ * runtime override + history for the built-in baselines in lib/legal/policies.
+ * Publishing a new row (status "current") supersedes the baseline for that
+ * policy type/locale; previous versions are kept, never overwritten.
+ */
+export const POLICY_PUBLICATION_STATUSES = ["draft", "current", "retired"] as const;
+
+export const policyPublications = sqliteTable(
+  "policy_publications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // Policy type, e.g. "privacy" | "terms" | "cookies" | "refunds" | ...
+    policyType: text("policy_type").notNull(),
+    locale: text("locale").notNull().default("en"),
+    version: text("version").notNull(),
+    status: text("status").notNull().default("draft"),
+    // Whether this release is a material change requiring re-acknowledgement.
+    materialChange: integer("material_change", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    effectiveAt: text("effective_at"),
+    // Serialized localized policy document (title/scope/sections) as JSON.
+    content: text("content").notNull(),
+    publishedBy: text("published_by"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("policy_pub_type_locale_idx").on(table.policyType, table.locale),
+    index("policy_pub_status_idx").on(table.status),
+  ],
+);
+
+export type PolicyPublication = typeof policyPublications.$inferSelect;
+export type NewPolicyPublication = typeof policyPublications.$inferInsert;

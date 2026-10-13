@@ -29,6 +29,13 @@
       "when": 1791736528322,
       "tag": "0003_tan_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791926178776,
+      "tag": "0004_serious_chamber",
+      "breakpoints": true
     }
   ]
 }

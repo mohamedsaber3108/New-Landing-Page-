@@ -1,6 +1,9 @@
-// GET /api/v1/legal/:type?locale= (handoff C08) — PROVISIONAL legal copy.
-// The response marks `approval: "provisional"`; exposing it via API does not
-// make it an approved policy.
+// GET /api/v1/legal/:type?locale= (handoff C08 + Legal Implementation Pack).
+//
+// Serves the central legal policies from lib/legal (privacy, terms, cookies,
+// refunds, payments, ai-use, privacy-requests). The response carries an honest
+// `approval` state: "draft" until a human publishes a reviewed version via the
+// admin — exposing a draft via the API does not make it an approved policy.
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
 import { LEGAL_TYPES, publicLegal, type LegalType, type Locale } from "@/lib/api/content";
 
@@ -19,5 +22,10 @@ export async function GET(
       requestId,
     });
   }
-  return ok(publicLegal(type as LegalType, locale), { requestId });
+
+  const doc = await publicLegal(type as LegalType, locale);
+  if (!doc) {
+    return fail({ code: "not_found", message: `No legal document for "${type}".`, requestId });
+  }
+  return ok(doc, { requestId });
 }
