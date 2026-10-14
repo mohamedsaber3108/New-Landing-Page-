@@ -70,6 +70,58 @@ function safeParse(json: string): Partial<LocalizedPolicy> | null {
 }
 
 /**
+ * PUBLIC projection of a policy. The public web + public API must NEVER expose
+ * unapproved draft text or internal placeholders (e.g. "[REQUIRES LEGAL
+ * REVIEW]"). So:
+ *   - PUBLISHED (consistent EN+AR release): return the full approved document.
+ *   - DRAFT / inconsistent: return ONLY safe metadata (title, scope, applies-to)
+ *     plus a neutral "being finalized" notice — no section bodies, no
+ *     placeholders. Full draft text is reachable only via the authenticated
+ *     admin preview.
+ * Returns null for an unknown type.
+ */
+export async function publicPolicyView(
+  type: PolicyType,
+  locale: Locale,
+): Promise<LocalizedPolicy | null> {
+  const resolved = await resolvePolicy(type, locale);
+  if (!resolved) return null;
+  if (resolved.approval === "published") return resolved;
+
+  // Draft: strip the body entirely and present a single neutral notice section.
+  const notice =
+    locale === "ar"
+      ? {
+          heading: "قيد الإعداد",
+          body: [
+            "تُراجَع هذه السياسة قانونيًا وستُنشر قريبًا. ولا يُعرض نصها المبدئي هنا حتى اعتماده.",
+            "للأسئلة المتعلقة بالخصوصية أو لممارسة حقوقك، استخدم صفحة «طلبات الخصوصية».",
+          ],
+        }
+      : {
+          heading: "Being finalized",
+          body: [
+            "This policy is under legal review and will be published shortly. Its provisional text is not shown here until it is approved.",
+            "For privacy questions or to exercise your rights, use the Privacy Requests page.",
+          ],
+        };
+  return {
+    type: resolved.type,
+    path: resolved.path,
+    // Do not advertise a provisional version string publicly.
+    version: "",
+    effectiveAt: null,
+    updatedAt: resolved.updatedAt,
+    approval: "draft",
+    title: resolved.title,
+    scope: resolved.scope,
+    appliesTo: resolved.appliesTo,
+    audience: resolved.audience,
+    sections: [{ id: "status", heading: notice.heading, body: notice.body }],
+  };
+}
+
+/**
  * Fetch the "current" published row for a policy type + locale, or null if the
  * policy is not published in that locale. Unlike resolvePolicy, this does NOT
  * fall back to the draft baseline — callers that need to know "is there an

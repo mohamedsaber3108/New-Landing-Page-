@@ -57,13 +57,23 @@ to `/privacy`, `/terms`, `/cookies` are preserved.
 - The Master creates **no account**, so no separate Master signup system was
   invented (per instruction §7).
 
-### Publication consistency
-- `resolvePolicy` marks a policy **published** to the public only when BOTH
-  locales are published at the **same version**; a half-published or
-  version-mismatched release renders available text but keeps the honest
-  **draft** badge, so a draft is never presented as a final policy.
-- Protected **draft preview** for staff: `GET /api/v1/admin/policies?type=&preview=&locale=`
-  returns the true per-locale draft (admin-gated).
+### Publication consistency & draft redaction
+- **Public surfaces never expose unapproved text or internal placeholders.**
+  `publicPolicyView` (used by the public `/api/v1/legal/:type` endpoint and the
+  public policy page) returns full text ONLY for a policy published as a
+  consistent EN+AR release. For a draft it returns a neutral "being finalized"
+  notice — no section bodies, no version string, no `[REQUIRES …]` tokens. The
+  policy page client mirrors this (`redactForPublic`) so nothing provisional
+  renders even before/without JS.
+- Functional controls stay available regardless of approval state: the Cookie
+  Settings panel (cookies page) and the privacy-request form (privacy-requests
+  page) render even while the policy wording is draft — they are tools, not
+  policy text.
+- Full draft text is reachable ONLY through the **authenticated** admin preview:
+  `GET /api/v1/admin/policies?type=&preview=&locale=` (gated by
+  `authorizeAdmin`; a `?preview=` param alone is not authorization).
+- A half-published or version-mismatched release is treated as draft (redacted),
+  so a partial release is never presented as a final policy.
 - Acceptance records carry the server's published version, so public pages, the
   legal API, and recorded consent all reference the same release.
 

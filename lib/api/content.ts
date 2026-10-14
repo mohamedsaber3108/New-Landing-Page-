@@ -93,7 +93,7 @@ export function publicFaqs(locale: Locale) {
  * until a human publishes it.
  */
 import { POLICY_TYPES, type PolicyType } from "@/lib/legal/policies";
-import { resolvePolicy } from "@/lib/legal/store";
+import { publicPolicyView } from "@/lib/legal/store";
 
 // Backward-compatible alias: the original API accepted only these three. The
 // full set is POLICY_TYPES. Both are exported so existing callers keep working.
@@ -101,7 +101,9 @@ export const LEGAL_TYPES = POLICY_TYPES;
 export type LegalType = PolicyType;
 
 export async function publicLegal(type: LegalType, locale: Locale) {
-  const policy = await resolvePolicy(type, locale);
+  // publicPolicyView redacts draft bodies/placeholders — only published policies
+  // return full text. Drafts return a neutral "being finalized" notice.
+  const policy = await publicPolicyView(type, locale);
   if (!policy) return null;
   return {
     type: policy.type,

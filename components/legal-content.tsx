@@ -35,10 +35,10 @@ const ui = {
     effective: "Effective",
     updated: "Last updated",
     notPublished:
-      "Draft for review — this wording is provisional and awaiting legal review before it becomes a binding notice. It describes how the website actually behaves today.",
+      "This policy is being finalized and is under legal review. Its text is not published yet, so it is not shown here. Any functional controls on this page remain available.",
     published: "Published",
     reviewNote:
-      "Items marked [REQUIRES LEGAL REVIEW] or [REQUIRES CONFIGURATION] are business/legal facts a human must confirm before publication; they are shown rather than invented.",
+      "Policies marked Draft are being finalized under legal review and are not published yet. Published policies show their version and effective date.",
     frameworks: "Applicable data-protection frameworks",
     backToCenter: "Back to the Legal Center",
     openSettings: "Open Cookie Settings",
@@ -54,16 +54,51 @@ const ui = {
     effective: "تاريخ السريان",
     updated: "آخر تحديث",
     notPublished:
-      "مسودة للمراجعة — هذه الصياغة مبدئية وبانتظار المراجعة القانونية قبل أن تصبح إشعارًا مُلزِمًا. وهي تصف سلوك الموقع الفعلي اليوم.",
+      "هذه السياسة قيد الإعداد وتحت المراجعة القانونية. ولم يُنشر نصها بعد، لذا لا يُعرض هنا. وتبقى أي أدوات وظيفية في هذه الصفحة متاحة.",
     published: "منشور",
     reviewNote:
-      "العناصر الموسومة بـ [يتطلب مراجعة قانونية] أو [يتطلب تهيئة] هي حقائق قانونية/تجارية يجب أن يؤكدها إنسان قبل النشر؛ وتُعرض بدلًا من اختلاقها.",
+      "السياسات الموسومة «مسودة» قيد الإعداد تحت المراجعة القانونية ولم تُنشر بعد. أما السياسات المنشورة فتعرض إصدارها وتاريخ سريانها.",
     frameworks: "أطر حماية البيانات المنطبقة",
     backToCenter: "العودة إلى المركز القانوني",
     openSettings: "فتح إعدادات ملفات الارتباط",
     notEffective: "لم يَسرِ بعد",
   },
 } as const;
+
+type LocalPolicy = ReturnType<typeof localizedPolicy>;
+
+/**
+ * Public redaction mirror of the server's publicPolicyView: for a DRAFT policy,
+ * strip all section bodies and the version string and show only a neutral
+ * "being finalized" notice. Published policies pass through unchanged. This
+ * guarantees the client never renders provisional text or "[REQUIRES ...]"
+ * placeholders before/without the API response.
+ */
+function redactForPublic(doc: LocalPolicy, locale: Locale): LocalPolicy {
+  if (doc.approval === "published") return doc;
+  const notice =
+    locale === "ar"
+      ? {
+          heading: "قيد الإعداد",
+          body: [
+            "تُراجَع هذه السياسة قانونيًا وستُنشر قريبًا. ولا يُعرض نصها المبدئي هنا حتى اعتماده.",
+            "للأسئلة المتعلقة بالخصوصية أو لممارسة حقوقك، استخدم صفحة «طلبات الخصوصية».",
+          ],
+        }
+      : {
+          heading: "Being finalized",
+          body: [
+            "This policy is under legal review and will be published shortly. Its provisional text is not shown here until it is approved.",
+            "For privacy questions or to exercise your rights, use the Privacy Requests page.",
+          ],
+        };
+  return {
+    ...doc,
+    version: "",
+    effectiveAt: null,
+    sections: [{ id: "status", heading: notice.heading, body: notice.body }],
+  };
+}
 
 function Badge({ published, locale }: { published: boolean; locale: Locale }) {
   const t = ui[locale];
@@ -77,23 +112,53 @@ function Badge({ published, locale }: { published: boolean; locale: Locale }) {
 /** The Legal Center index: cards linking to every policy. */
 export function LegalCenter({ locale }: { locale: Locale }) {
   const t = ui[locale];
+  // Published state per policy type, fetched from the authoritative API so the
+  // index badge/version reflect reality and never advertise a draft version
+  // string. Defaults to "not published" (safe) until the fetch returns.
+  const [published, setPublished] = useState<Record<string, { published: boolean; version: string | null }>>({});
+  useEffect(() => {
+    let active = true;
+    Promise.all(
+      LEGAL_CENTER_ORDER.map((type) =>
+        fetch(`/api/v1/legal/${type}?locale=${locale}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((json) => [type, json?.data] as const)
+          .catch(() => [type, null] as const),
+      ),
+    ).then((pairs) => {
+      if (!active) return;
+      const map: Record<string, { published: boolean; version: string | null }> = {};
+      for (const [type, d] of pairs) {
+        const isPub = d?.approval === "published";
+        map[type] = { published: isPub, version: isPub ? d?.version ?? null : null };
+      }
+      setPublished(map);
+    });
+    return () => {
+      active = false;
+    };
+  }, [locale]);
+
   return (
     <div className="legal-center">
       <p className="legal-lead">{t.centerIntro}</p>
       <div className="legal-grid">
         {LEGAL_CENTER_ORDER.map((type) => {
           const p = localizedPolicy(POLICIES[type], locale);
-          const published = p.approval === "published";
+          const state = published[type];
+          const isPub = state?.published ?? false;
           return (
             <Link key={type} href={p.path} className="legal-card">
               <span className="legal-card-top">
                 <b>{p.title}</b>
-                <Badge published={published} locale={locale} />
+                <Badge published={isPub} locale={locale} />
               </span>
               <span className="legal-card-scope">{p.scope}</span>
-              <span className="legal-card-meta">
-                {t.version}: <bdi>{p.version}</bdi>
-              </span>
+              {isPub && state?.version && (
+                <span className="legal-card-meta">
+                  {t.version}: <bdi>{state.version}</bdi>
+                </span>
+              )}
             </Link>
           );
         })}
@@ -118,13 +183,13 @@ export function LegalCenter({ locale }: { locale: Locale }) {
 export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale }) {
   const t = ui[locale];
   const base = getPolicy(type);
-  // Baseline localized document (null only for an unknown type). Hooks must run
-  // unconditionally, so compute a safe fallback and bail in render below.
-  const baseline = base ? localizedPolicy(base, locale) : null;
+  // Baseline localized document (null only for an unknown type). The built-in
+  // baseline is a DRAFT, so we must NOT render its section bodies or any
+  // "[REQUIRES ...]" placeholders publicly. Until the authoritative API view
+  // arrives, show only safe metadata + a neutral "being finalized" notice. The
+  // API (publicPolicyView) returns full text ONLY for a published release.
+  const baseline = base ? redactForPublic(localizedPolicy(base, locale), locale) : null;
 
-  // Live-resolve a published override from the API when available, so the page
-  // reflects an admin-published version without a code change. Falls back to
-  // the baseline already rendered (progressive enhancement; no layout shift).
   const [resolved, setResolved] = useState(baseline);
   useEffect(() => {
     if (!baseline) return;
@@ -177,7 +242,7 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
           </div>
           <div>
             <dt>{t.version}</dt>
-            <dd><bdi>{doc.version}</bdi></dd>
+            <dd><bdi>{doc.version || "—"}</bdi></dd>
           </div>
           <div>
             <dt>{t.effective}</dt>
@@ -213,13 +278,14 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
             {s.body.map((para, i) => (
               <p key={i}>{para}</p>
             ))}
-            {/* The Cookie Policy embeds the live Cookie Settings panel. */}
-            {type === "cookies" && s.id === "optional" && <CookieSettingsPanel locale={locale} />}
           </section>
         ))}
       </div>
 
-      {/* The Privacy Requests page embeds the working request form. */}
+      {/* Functional tools stay available regardless of policy approval state —
+          they are controls, not policy wording. The Cookie Policy embeds live
+          Cookie Settings; the Privacy Requests page embeds the request form. */}
+      {type === "cookies" && <CookieSettingsPanel locale={locale} />}
       {type === "privacy-requests" && <PrivacyRequestForm locale={locale} />}
 
       <p className="legal-back">
