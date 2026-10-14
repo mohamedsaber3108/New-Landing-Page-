@@ -11,8 +11,9 @@
 //    "published" is reserved for text a human has reviewed and released; the
 //    admin workflow flips that, nothing here hard-codes "published".
 //  - Business facts that are not verified are written as REVIEW placeholders
-//    using the exact token `[REQUIRES LEGAL REVIEW]` / `[REQUIRES CONFIGURATION]`
-//    so they are visible and greppable, never silently invented.
+//    using the token `[FOR REVIEW — …]` (Arabic: `[للمراجعة — …]`), each a
+//    single marker (never slash-separated alternatives presented as final
+//    wording), so they are visible and greppable, never silently invented.
 //  - EN and AR variants of one policy share a single version string so the two
 //    languages always represent the same release.
 //
@@ -79,12 +80,19 @@ export type Policy = {
  * a fabricated company name / address / DPO.
  */
 export const RESPONSIBLE_CONTACT = {
-  // e.g. "USAM" trading name is safe; the LEGAL ENTITY is not yet verified.
+  // Trading name is safe to state. The exact REGISTERED names/address/number
+  // must come from the company's registration documents — do not invent the
+  // registered spelling. Marked [FOR REVIEW …] until supplied.
   operatorDisplayName: "USAM",
-  legalEntity: "[REQUIRES LEGAL REVIEW: registered legal entity name]",
-  address: "[REQUIRES LEGAL REVIEW: registered address]",
-  privacyEmail: "[REQUIRES CONFIGURATION: privacy contact email]",
-  dpo: "[REQUIRES LEGAL REVIEW: data protection officer / privacy officer]",
+  legalEntity: "[FOR REVIEW — exact registered English legal name (Egyptian LLC)]",
+  legalEntityAr: "[للمراجعة — الاسم القانوني العربي المسجّل بدقّة (ش.ذ.م.م مصرية)]",
+  address: "[FOR REVIEW — registered address]",
+  addressAr: "[للمراجعة — العنوان المسجّل]",
+  // Optional: only published if provided.
+  registrationNumber: "" as string, // e.g. commercial registration no.; empty = omit
+  privacyEmail: "[FOR REVIEW — existing, monitored privacy email]",
+  // Contact label only — does NOT assert a formally appointed DPO.
+  contactLabel: "USAM Privacy Team",
 } as const;
 
 /** The selling platforms the Master routes to (payment/accounts live there). */
@@ -169,14 +177,16 @@ const privacy: Policy = {
       en: {
         heading: "Who is responsible",
         body: [
-          `This website is operated under the "USAM" name. The registered legal entity, address and the identity of our privacy contact are ${RESPONSIBLE_CONTACT.legalEntity}, ${RESPONSIBLE_CONTACT.address}, ${RESPONSIBLE_CONTACT.dpo}. These details are pending confirmation before this policy is published.`,
+          `This website (usamif.com) is operated by ${RESPONSIBLE_CONTACT.legalEntity}, an Egyptian limited liability company, registered at ${RESPONSIBLE_CONTACT.address}${RESPONSIBLE_CONTACT.registrationNumber ? ` (commercial registration ${RESPONSIBLE_CONTACT.registrationNumber})` : ""}. We trade as "USAM".`,
+          `For privacy matters, contact the USAM Privacy Team at ${RESPONSIBLE_CONTACT.privacyEmail}.`,
           "The Master website helps you discover the right USAM platform and send enquiries. Separate companies/teams may operate individual platforms; each platform's own privacy notice governs the data you share there.",
         ],
       },
       ar: {
         heading: "من المسؤول",
         body: [
-          "يُدار هذا الموقع باسم «يوزم». الكيان القانوني المسجّل وعنوانه وهوية مسؤول الخصوصية لدينا قيد التأكيد قبل نشر هذه السياسة.",
+          `يُشغّل هذا الموقع (usamif.com) ${RESPONSIBLE_CONTACT.legalEntityAr}، وهي شركة مصرية ذات مسؤولية محدودة، ومقرّها ${RESPONSIBLE_CONTACT.addressAr}${RESPONSIBLE_CONTACT.registrationNumber ? ` (سجل تجاري رقم ${RESPONSIBLE_CONTACT.registrationNumber})` : ""}. ونعمل تحت اسم «يوزم».`,
+          `لمسائل الخصوصية، تواصل مع فريق خصوصية يوزم عبر ${RESPONSIBLE_CONTACT.privacyEmail}.`,
           "يساعدك الموقع الرئيسي على اكتشاف المنصة المناسبة وإرسال الاستفسارات. وقد تُشغّل المنصات المختلفة جهات مستقلة؛ ويحكم إشعار الخصوصية الخاص بكل منصة البيانات التي تشاركها هناك.",
         ],
       },
@@ -186,53 +196,63 @@ const privacy: Policy = {
       en: {
         heading: "What this website collects",
         body: [
-          "Enquiry data: when you submit the contact, enterprise or government form, we store the name, email, optional organization and the message you choose to send, plus the enquiry type, your chosen language, and any structured fields you complete (role, country, timeline and similar).",
-          "Preferences: your language and light/dark theme choices are stored in your browser (local storage) so they persist between visits. These stay on your device.",
-          "Consent and acceptance records: when you accept Terms, acknowledge this notice, or set a marketing or cookie choice, we record that event with its policy version, purpose, timestamp and language, to show what was agreed and when.",
-          "We do not run advertising trackers or third-party analytics on this website. See the Cookie Policy for the full, honest inventory.",
+          "Enquiry data: when you submit the contact, enterprise or government form, we store the name, email, optional organization, your message, the enquiry type, your chosen language, and any structured fields you complete (role, phone, country, timeline, participant range, budget range, beneficiaries). If you reached this site signed in through ChatGPT, a signed-in account identifier may be stored with your enquiry; otherwise it is recorded as anonymous.",
+          "Privacy-request data: if you submit a privacy request, we store your name, email, request type, any reference you give us, your message, and the workflow status (including whether identity has been verified) so we can handle and evidence the request.",
+          "Consent and acceptance records: when Terms acceptance, a privacy-notice presentation, a marketing choice, or a cookie choice occurs, we record that event with its policy version, purpose, timestamp and language, to show what happened and when.",
+          "Helpfulness feedback: if you rate a page or FAQ as helpful or not, we store only that rating and the content id — no free text and nothing that identifies you.",
+          "Guide signals: when you use the Ask USAM guide, we store only the resolved destination intent and language — never the words you typed.",
+          "Preferences: your language and light/dark theme choices are stored in your browser (local storage), on your device, not on our servers.",
+          "Operational records: your submissions are held in our database, a queued internal notification record is created for each (containing a reference, not your message body), and the hosting infrastructure keeps standard technical logs (for example web-server request logs, which typically include IP addresses) and backups. The exact log and backup details are [FOR REVIEW — confirm server logging/backup specifics].",
+          "We do not run advertising trackers or third-party analytics on this website. See the Cookie Policy for the full inventory.",
         ],
       },
       ar: {
         heading: "ما يجمعه هذا الموقع",
         body: [
-          "بيانات الاستفسار: عند إرسال نموذج التواصل أو المؤسسات أو الجهات الحكومية، نحفظ الاسم والبريد الإلكتروني واسم المؤسسة (اختياري) والرسالة التي تختار إرسالها، إضافةً إلى نوع الاستفسار ولغتك المختارة وأي حقول منظّمة تكملها (الدور، الدولة، الإطار الزمني، وما شابه).",
-          "التفضيلات: تُحفظ لغتك واختيارك للوضع الفاتح/الداكن في متصفحك (التخزين المحلي) لتبقى بين الزيارات، وتظل على جهازك.",
-          "سجلات الموافقة والقبول: عند قبولك للشروط أو إقرارك بهذا الإشعار أو ضبط اختيار تسويقي أو اختيار لملفات الارتباط، نسجّل ذلك الحدث مع إصدار السياسة والغرض والوقت واللغة؛ لإثبات ما تمت الموافقة عليه ومتى.",
-          "لا نشغّل أدوات تتبّع إعلانية ولا تحليلات من أطراف ثالثة على هذا الموقع. راجع سياسة ملفات الارتباط للاطّلاع على الجرد الكامل والصادق.",
+          "بيانات الاستفسار: عند إرسال نموذج التواصل أو المؤسسات أو الجهات الحكومية، نحفظ الاسم والبريد الإلكتروني واسم المؤسسة (اختياري) ورسالتك ونوع الاستفسار ولغتك المختارة وأي حقول منظّمة تكملها (الدور، الهاتف، الدولة، الإطار الزمني، نطاق المشاركين، نطاق الميزانية، الفئات المستفيدة). وإذا وصلت إلى الموقع مسجّلًا الدخول عبر ChatGPT، فقد يُحفظ معرّف حساب مع استفسارك؛ وإلا فيُسجَّل كمجهول.",
+          "بيانات طلب الخصوصية: عند تقديم طلب خصوصية، نحفظ اسمك وبريدك ونوع الطلب وأي رقم مرجعي تزوّدنا به ورسالتك وحالة سير العمل (بما في ذلك ما إذا تم التحقق من الهوية) لمعالجة الطلب وإثباته.",
+          "سجلات الموافقة والقبول: عند حدوث قبول للشروط أو عرض لإشعار الخصوصية أو اختيار تسويقي أو اختيار لملفات الارتباط، نسجّل ذلك الحدث مع إصدار السياسة والغرض والوقت واللغة؛ لإثبات ما حدث ومتى.",
+          "تقييم الفائدة: إذا قيّمت صفحة أو سؤالًا شائعًا بأنه مفيد أو غير مفيد، فإننا نحفظ التقييم ومعرّف المحتوى فقط — دون أي نص حر ودون ما يحدد هويتك.",
+          "إشارات الدليل: عند استخدام دليل «اسأل يوزم»، نحفظ فقط الوجهة المقصودة واللغة — ولا نحفظ ما كتبته أبدًا.",
+          "التفضيلات: تُحفظ لغتك واختيارك للوضع الفاتح/الداكن في متصفحك (التخزين المحلي) على جهازك، لا على خوادمنا.",
+          "السجلات التشغيلية: تُحفظ طلباتك في قاعدة بياناتنا، ويُنشأ سجل إشعار داخلي في قائمة انتظار لكل منها (يحتوي على رقم مرجعي لا على نص رسالتك)، وتحتفظ البنية التحتية للاستضافة بسجلات تقنية معتادة (مثل سجلات خادم الويب التي تتضمن عادةً عناوين IP) ونسخ احتياطية. وتفاصيل السجلات والنسخ الاحتياطية الدقيقة [للمراجعة — تأكيد تفاصيل تسجيل الخادم والنسخ الاحتياطي].",
+          "لا نشغّل أدوات تتبّع إعلانية ولا تحليلات من أطراف ثالثة على هذا الموقع. راجع سياسة ملفات الارتباط للاطّلاع على الجرد الكامل.",
         ],
       },
     },
     {
       id: "why-and-basis",
       en: {
-        heading: "Why we use it",
+        heading: "Why we use it and our legal basis",
         body: [
-          "To respond to your enquiry and route it to the correct USAM team, to remember your language and theme, and to keep an auditable record of the choices you make here.",
-          "The specific lawful basis for each purpose under the applicable Egyptian and Saudi data-protection frameworks is [REQUIRES LEGAL REVIEW] and will be stated here before publication. We do not treat acknowledging this notice as blanket consent for unrelated processing.",
+          "We use this information to respond to your enquiry and route it to the correct USAM team; to receive and handle privacy requests; to remember your language and theme; to keep an auditable record of the choices you make here; to understand, in aggregate, where visitors want to go; and to operate and secure the website.",
+          "The specific lawful basis for each purpose under the applicable Egyptian and Saudi data-protection frameworks is [FOR REVIEW — lawful basis per purpose, to be confirmed by counsel]. We do not treat acknowledging this notice as blanket consent for unrelated processing.",
         ],
       },
       ar: {
-        heading: "لماذا نستخدمها",
+        heading: "لماذا نستخدمها وأساسنا القانوني",
         body: [
-          "للرد على استفسارك وتوجيهه إلى فريق يوزم المناسب، ولتذكّر لغتك ومظهرك، وللاحتفاظ بسجل قابل للمراجعة للاختيارات التي تتخذها هنا.",
-          "الأساس القانوني لكل غرض بموجب الأطر المصرية والسعودية لحماية البيانات [يتطلب مراجعة قانونية] وسيُذكر هنا قبل النشر. ولا نعتبر الإقرار بهذا الإشعار موافقةً شاملةً على معالجات غير ذات صلة.",
+          "نستخدم هذه المعلومات للرد على استفسارك وتوجيهه إلى فريق يوزم المناسب؛ ولاستلام طلبات الخصوصية ومعالجتها؛ ولتذكّر لغتك ومظهرك؛ وللاحتفاظ بسجل قابل للمراجعة لاختياراتك هنا؛ ولفهم وجهة الزوّار بشكل إجمالي؛ ولتشغيل الموقع وتأمينه.",
+          "الأساس القانوني لكل غرض بموجب الأطر المصرية والسعودية لحماية البيانات [للمراجعة — الأساس القانوني لكل غرض، يؤكده المستشار القانوني]. ولا نعتبر الإقرار بهذا الإشعار موافقةً شاملةً على معالجات غير ذات صلة.",
         ],
       },
     },
     {
       id: "sharing-and-platforms",
       en: {
-        heading: "Sharing and the platforms",
+        heading: "Sharing, platforms and processors",
         body: [
           "When you continue to a platform (Education, Career, Freelancing, Kids), you leave this website and that platform's own terms and privacy notice apply. A choice you make here does not automatically authorize processing on another platform.",
-          "Service providers that help operate this website (for example hosting) process data on our instructions. The maintained processor list and any international-transfer safeguards are [REQUIRES LEGAL REVIEW] and documented in the admin processor inventory.",
+          "Verified processors used by this website: our cloud hosting provider processes the data on our instructions (the website and its database run on cloud infrastructure in Europe — see International transfers). We do not use third-party analytics or advertising processors on this site.",
+          "Email you send to our privacy contact is handled by our email provider; the provider and any other operational processors are [FOR REVIEW — confirm email provider and any additional processors]. The complete, maintained processor list is kept in our internal processor inventory.",
         ],
       },
       ar: {
-        heading: "المشاركة والمنصات",
+        heading: "المشاركة والمنصات والمعالِجون",
         body: [
           "عند الانتقال إلى منصة (التعليم أو المسار المهني أو العمل الحر أو الأطفال)، تغادر هذا الموقع وتسري شروط تلك المنصة وإشعار خصوصيتها. والاختيار الذي تتخذه هنا لا يُصرّح تلقائيًا بالمعالجة على منصة أخرى.",
-          "يعالج مزوّدو الخدمة الذين يساعدون في تشغيل هذا الموقع (مثل الاستضافة) البيانات وفق تعليماتنا. وقائمة المعالجين المحدّثة وأي ضمانات للنقل الدولي [تتطلب مراجعة قانونية] وموثّقة في جرد المعالجين بلوحة الإدارة.",
+          "المعالِجون المؤكدون لهذا الموقع: يعالج مزوّد الاستضافة السحابية البيانات وفق تعليماتنا (يعمل الموقع وقاعدة بياناته على بنية سحابية في أوروبا — راجع النقل الدولي). ولا نستخدم معالِجي تحليلات أو إعلانات من أطراف ثالثة على هذا الموقع.",
+          "يُعالَج البريد الذي ترسله إلى جهة التواصل للخصوصية عبر مزوّد البريد لدينا؛ والمزوّد وأي معالِجين تشغيليين آخرين [للمراجعة — تأكيد مزوّد البريد وأي معالِجين إضافيين]. وتُحفظ قائمة المعالِجين الكاملة والمحدّثة في جرد المعالِجين الداخلي.",
         ],
       },
     },
@@ -241,15 +261,17 @@ const privacy: Policy = {
       en: {
         heading: "Keeping data and your rights",
         body: [
-          "We keep enquiries only as long as needed to handle them and for a reasonable follow-up period. The exact retention periods are [REQUIRES LEGAL REVIEW] and will be published here once confirmed.",
-          "Subject to the applicable law, you may ask to access, correct or delete your enquiry data, or withdraw an optional consent. Use the Privacy Requests page. We verify identity before acting on a request and never action deletion or export from an email address alone.",
+          "We keep each type of record only as long as needed for its purpose and a reasonable follow-up period. The exact retention periods for enquiries, privacy requests, consent-evidence records and operational logs are [FOR REVIEW — retention periods per record type, to be confirmed by counsel] and will be stated here before publication.",
+          "Important: automated deletion is not yet in place. We will not state a retention period as a promise until the process that enforces it exists; today, removal is handled manually on request. This will be upgraded to an enforced schedule before any specific period is published.",
+          "Subject to the applicable law, you may ask to access, correct or delete your data, or withdraw an optional consent, through the Privacy Requests page. Submitting a request gives you a receipt reference confirming we received it — it is not, by itself, fulfilment. Before we disclose, change or delete anything, a staff member verifies your identity; we never action a disclosure or deletion from an email address alone. Which rights apply and any legal retention exceptions are [FOR REVIEW — applicable rights and exceptions, to be confirmed by counsel].",
         ],
       },
       ar: {
         heading: "حفظ البيانات وحقوقك",
         body: [
-          "نحتفظ بالاستفسارات فقط للمدة اللازمة لمعالجتها ولفترة متابعة معقولة. ومدد الاحتفاظ الدقيقة [تتطلب مراجعة قانونية] وستُنشر هنا بعد تأكيدها.",
-          "ووفقًا للقانون المعمول به، يمكنك طلب الاطّلاع على بيانات استفسارك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية. استخدم صفحة طلبات الخصوصية. ونتحقق من الهوية قبل تنفيذ أي طلب، ولا ننفّذ حذفًا أو تصديرًا بالاعتماد على البريد الإلكتروني وحده.",
+          "نحتفظ بكل نوع من السجلات فقط للمدة اللازمة لغرضه ولفترة متابعة معقولة. ومدد الاحتفاظ الدقيقة للاستفسارات وطلبات الخصوصية وسجلات إثبات الموافقة والسجلات التشغيلية [للمراجعة — مدد الاحتفاظ لكل نوع سجل، يؤكدها المستشار القانوني] وستُذكر هنا قبل النشر.",
+          "مهم: الحذف التلقائي غير مُفعّل بعد. ولن نذكر مدة احتفاظ كوعد قبل وجود العملية التي تنفّذها؛ واليوم تتم الإزالة يدويًا عند الطلب. وسيُرقّى ذلك إلى جدول مُنفَّذ قبل نشر أي مدة محددة.",
+          "ووفقًا للقانون المعمول به، يمكنك طلب الاطّلاع على بياناتك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية، عبر صفحة طلبات الخصوصية. ويمنحك تقديم الطلب رقمًا مرجعيًا يؤكد استلامنا له — وهو ليس تنفيذًا بحد ذاته. وقبل أن نُفصح عن أي بيانات أو نغيّرها أو نحذفها، يتحقق موظف من هويتك؛ ولا ننفّذ إفصاحًا أو حذفًا بالاعتماد على البريد الإلكتروني وحده. والحقوق المنطبقة وأي استثناءات قانونية للاحتفاظ [للمراجعة — الحقوق المنطبقة والاستثناءات، يؤكدها المستشار القانوني].",
         ],
       },
     },
@@ -258,7 +280,7 @@ const privacy: Policy = {
       en: {
         heading: "Children",
         body: [
-          "This Master website is intended for adults exploring the ecosystem, including parents. The USAM Kids platform runs its own age-appropriate rules and parent/guardian notices; those apply when you continue to Kids. Age thresholds and guardian-consent mechanics are configured on that platform and are [REQUIRES LEGAL REVIEW].",
+          "This Master website is intended for adults exploring the ecosystem, including parents. The USAM Kids platform runs its own age-appropriate rules and parent/guardian notices; those apply when you continue to Kids. Age thresholds and guardian-consent mechanics are configured on that platform and are [FOR REVIEW — Kids age/guardian rules, platform-side].",
         ],
       },
       ar: {
@@ -274,14 +296,14 @@ const privacy: Policy = {
         heading: "Changes and contact",
         body: [
           "We keep previous versions of this policy and record its version with your acknowledgement. If we make a material change we will show it appropriately rather than forcing acceptance on every visit.",
-          `Privacy contact: ${RESPONSIBLE_CONTACT.privacyEmail}. Submit a request through the Privacy Requests page.`,
+          `Privacy contact: the USAM Privacy Team at ${RESPONSIBLE_CONTACT.privacyEmail}. You can also submit a request through the Privacy Requests page.`,
         ],
       },
       ar: {
         heading: "التغييرات والتواصل",
         body: [
           "نحتفظ بالإصدارات السابقة من هذه السياسة ونسجّل إصدارها مع إقرارك. وإذا أجرينا تغييرًا جوهريًا فسنعرضه بشكل مناسب بدلًا من فرض القبول في كل زيارة.",
-          "جهة التواصل للخصوصية: [يتطلب التهيئة: بريد التواصل للخصوصية]. أرسل طلبك عبر صفحة طلبات الخصوصية.",
+          `جهة التواصل للخصوصية: فريق خصوصية يوزم عبر ${RESPONSIBLE_CONTACT.privacyEmail}. ويمكنك أيضًا إرسال طلب عبر صفحة طلبات الخصوصية.`,
         ],
       },
     },
@@ -378,7 +400,7 @@ const terms: Policy = {
         heading: "Liability and governing law",
         body: [
           "The website is provided on an \"as available\" basis. To the extent permitted by law, we are not liable for decisions you make after leaving for a platform; those are governed by the platform's terms.",
-          "The governing law and the venue for disputes are [REQUIRES LEGAL REVIEW] and will be stated here before publication. Nothing in these terms removes consumer rights that apply by law.",
+          "The governing law and the venue for disputes are [FOR REVIEW — governing law and venue, to be confirmed by counsel] and will be stated here before publication. Nothing in these terms removes consumer rights that apply by law.",
         ],
       },
       ar: {
@@ -522,7 +544,7 @@ const refunds: Policy = {
         heading: "Rules depend on what you bought",
         body: [
           "Different offerings can have different rules: a subscription, a one-time course or bundle, a professional service or booking, and a freelancing/marketplace transaction are not the same.",
-          "The exact eligibility windows, cancellation-versus-refund treatment, and processing timeframes for each offering are set and published by the platform and are [REQUIRES LEGAL REVIEW] here. We do not state a universal \"no refunds\" rule or invent a refund period, and applicable consumer rights are preserved.",
+          "The exact eligibility windows, cancellation-versus-refund treatment, and processing timeframes for each offering are set and published by the platform and are [FOR REVIEW — platform refund rules] here. We do not state a universal \"no refunds\" rule or invent a refund period, and applicable consumer rights are preserved.",
         ],
       },
       ar: {
@@ -609,7 +631,7 @@ const payments: Policy = {
         heading: "Security on the selling platform",
         body: [
           "On a selling platform, payment is handled through the provider's hosted checkout or tokenized fields where supported, so card data is handled by the payment provider rather than kept in USAM application logs or support tools.",
-          "We do not claim to be \"PCI certified\" or \"100% secure\", and we do not advertise bank partnerships, card-network logos, or 3-D Secure here. Using a hosted payment provider does not by itself establish USAM's own compliance. Any such claim will be published only with evidence and permission, after review. The provider's identity and capabilities are [REQUIRES CONFIGURATION] on the selling platform.",
+          "We do not claim to be \"PCI certified\" or \"100% secure\", and we do not advertise bank partnerships, card-network logos, or 3-D Secure here. Using a hosted payment provider does not by itself establish USAM's own compliance. Any such claim will be published only with evidence and permission, after review. The provider's identity and capabilities are [FOR REVIEW — payment provider, platform-side] on the selling platform.",
         ],
       },
       ar: {
@@ -714,7 +736,7 @@ const aiUse: Policy = {
       en: {
         heading: "AI on the platforms",
         body: [
-          "The platforms may offer their own AI features (for example learning or career assistants). Those features, the data they use, their providers, and any human-review controls are described on each platform and are [REQUIRES LEGAL REVIEW] for cross-platform summary here. A platform AI feature does not make final high-impact decisions without a reviewed, documented safeguard.",
+          "The platforms may offer their own AI features (for example learning or career assistants). Those features, the data they use, their providers, and any human-review controls are described on each platform and are [FOR REVIEW — platform AI disclosures] for cross-platform summary here. A platform AI feature does not make final high-impact decisions without a reviewed, documented safeguard.",
         ],
       },
       ar: {
@@ -751,7 +773,7 @@ const privacyRequests: Policy = {
         heading: "What you can ask for",
         body: [
           "Subject to the applicable law, you can ask us to: confirm what enquiry data we hold about you and access it, correct it, delete it, or withdraw an optional consent (such as marketing). You can also ask a general privacy question.",
-          "Which rights apply, and any legal exceptions (for example records we must keep), depend on the applicable Egyptian or Saudi framework and are [REQUIRES LEGAL REVIEW]. We will tell you how a specific request was handled.",
+          "Which rights apply, and any legal exceptions (for example records we must keep), depend on the applicable Egyptian or Saudi framework and are [FOR REVIEW — applicable rights and exceptions, to be confirmed by counsel]. We will tell you how a specific request was handled.",
         ],
       },
       ar: {

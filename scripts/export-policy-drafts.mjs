@@ -45,10 +45,13 @@ w(`Base currency for USAM-owned pricing: **${BASE_CURRENCY}**.`);
 w();
 w(`Responsible operator (to be confirmed before publication):`);
 w(`- Trading name: ${RESPONSIBLE_CONTACT.operatorDisplayName}`);
-w(`- Legal entity: ${RESPONSIBLE_CONTACT.legalEntity}`);
-w(`- Address: ${RESPONSIBLE_CONTACT.address}`);
-w(`- Privacy contact: ${RESPONSIBLE_CONTACT.privacyEmail}`);
-w(`- Data protection officer: ${RESPONSIBLE_CONTACT.dpo}`);
+w(`- Registered legal name (EN): ${RESPONSIBLE_CONTACT.legalEntity}`);
+w(`- Registered legal name (AR): ${RESPONSIBLE_CONTACT.legalEntityAr}`);
+w(`- Registered address (EN): ${RESPONSIBLE_CONTACT.address}`);
+w(`- Registered address (AR): ${RESPONSIBLE_CONTACT.addressAr}`);
+w(`- Commercial registration no.: ${RESPONSIBLE_CONTACT.registrationNumber || "[FOR REVIEW — optional, omit if not published]"}`);
+w(`- Privacy contact email: ${RESPONSIBLE_CONTACT.privacyEmail}`);
+w(`- Contact label: ${RESPONSIBLE_CONTACT.contactLabel} (not an assertion that a DPO is formally appointed)`);
 w();
 w(`## Applicable data-protection frameworks`);
 for (const f of LEGAL_FRAMEWORKS) {
