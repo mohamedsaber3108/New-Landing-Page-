@@ -202,7 +202,7 @@ const privacy: Policy = {
           "Helpfulness feedback: if you rate a page or FAQ as helpful or not, we store only that rating and the content id — no free text and nothing that identifies you.",
           "Guide signals: when you use the Ask USAM guide, we store only the resolved destination intent and language — never the words you typed.",
           "Preferences: your language and light/dark theme choices are stored in your browser (local storage), on your device, not on our servers.",
-          "Operational records: your submissions are held in our database, a queued internal notification record is created for each (containing a reference, not your message body), and the hosting infrastructure keeps standard technical logs (for example web-server request logs, which typically include IP addresses) and backups. The exact log and backup details are [FOR REVIEW — confirm server logging/backup specifics].",
+          "Operational records: your submissions are held in our database, and a queued internal notification record is created for each (containing a reference, not your message body). Our web server keeps standard access and error logs that include technical details such as IP address, timestamp and the page requested; these logs rotate and are retained for a short period (currently on the order of two weeks). Database backups are taken manually rather than on an automated schedule today.",
           "We do not run advertising trackers or third-party analytics on this website. See the Cookie Policy for the full inventory.",
         ],
       },
@@ -215,7 +215,7 @@ const privacy: Policy = {
           "تقييم الفائدة: إذا قيّمت صفحة أو سؤالًا شائعًا بأنه مفيد أو غير مفيد، فإننا نحفظ التقييم ومعرّف المحتوى فقط — دون أي نص حر ودون ما يحدد هويتك.",
           "إشارات الدليل: عند استخدام دليل «اسأل يوزم»، نحفظ فقط الوجهة المقصودة واللغة — ولا نحفظ ما كتبته أبدًا.",
           "التفضيلات: تُحفظ لغتك واختيارك للوضع الفاتح/الداكن في متصفحك (التخزين المحلي) على جهازك، لا على خوادمنا.",
-          "السجلات التشغيلية: تُحفظ طلباتك في قاعدة بياناتنا، ويُنشأ سجل إشعار داخلي في قائمة انتظار لكل منها (يحتوي على رقم مرجعي لا على نص رسالتك)، وتحتفظ البنية التحتية للاستضافة بسجلات تقنية معتادة (مثل سجلات خادم الويب التي تتضمن عادةً عناوين IP) ونسخ احتياطية. وتفاصيل السجلات والنسخ الاحتياطية الدقيقة [للمراجعة — تأكيد تفاصيل تسجيل الخادم والنسخ الاحتياطي].",
+          "السجلات التشغيلية: تُحفظ طلباتك في قاعدة بياناتنا، ويُنشأ سجل إشعار داخلي في قائمة انتظار لكل منها (يحتوي على رقم مرجعي لا على نص رسالتك). ويحتفظ خادم الويب لدينا بسجلات وصول وأخطاء معتادة تتضمن تفاصيل تقنية مثل عنوان IP والوقت والصفحة المطلوبة؛ وتُدوَّر هذه السجلات وتُحفظ لمدة قصيرة (نحو أسبوعين حاليًا). وتُؤخذ النسخ الاحتياطية لقاعدة البيانات يدويًا وليس وفق جدول تلقائي حتى الآن.",
           "لا نشغّل أدوات تتبّع إعلانية ولا تحليلات من أطراف ثالثة على هذا الموقع. راجع سياسة ملفات الارتباط للاطّلاع على الجرد الكامل.",
         ],
       },
@@ -244,7 +244,7 @@ const privacy: Policy = {
         body: [
           "When you continue to a platform (Education, Career, Freelancing, Kids), you leave this website and that platform's own terms and privacy notice apply. A choice you make here does not automatically authorize processing on another platform.",
           "Verified processors used by this website: our cloud hosting provider processes the data on our instructions (the website and its database run on cloud infrastructure in Europe — see International transfers). We do not use third-party analytics or advertising processors on this site.",
-          "Email you send to our privacy contact is handled by our email provider; the provider and any other operational processors are [FOR REVIEW — confirm email provider and any additional processors]. The complete, maintained processor list is kept in our internal processor inventory.",
+          "Email you send to our privacy contact is handled by our email provider, Google (Google Workspace), which processes that correspondence on our behalf. Any further operational processors are [FOR REVIEW — confirm any additional processors]. The complete, maintained processor list is kept in our internal processor inventory.",
         ],
       },
       ar: {
@@ -252,7 +252,7 @@ const privacy: Policy = {
         body: [
           "عند الانتقال إلى منصة (التعليم أو المسار المهني أو العمل الحر أو الأطفال)، تغادر هذا الموقع وتسري شروط تلك المنصة وإشعار خصوصيتها. والاختيار الذي تتخذه هنا لا يُصرّح تلقائيًا بالمعالجة على منصة أخرى.",
           "المعالِجون المؤكدون لهذا الموقع: يعالج مزوّد الاستضافة السحابية البيانات وفق تعليماتنا (يعمل الموقع وقاعدة بياناته على بنية سحابية في أوروبا — راجع النقل الدولي). ولا نستخدم معالِجي تحليلات أو إعلانات من أطراف ثالثة على هذا الموقع.",
-          "يُعالَج البريد الذي ترسله إلى جهة التواصل للخصوصية عبر مزوّد البريد لدينا؛ والمزوّد وأي معالِجين تشغيليين آخرين [للمراجعة — تأكيد مزوّد البريد وأي معالِجين إضافيين]. وتُحفظ قائمة المعالِجين الكاملة والمحدّثة في جرد المعالِجين الداخلي.",
+          "يُعالَج البريد الذي ترسله إلى جهة التواصل للخصوصية عبر مزوّد البريد لدينا، وهو Google‏ (Google Workspace)، الذي يعالج تلك المراسلات نيابةً عنّا. وأي معالِجين تشغيليين إضافيين [للمراجعة — تأكيد أي معالِجين إضافيين]. وتُحفظ قائمة المعالِجين الكاملة والمحدّثة في جرد المعالِجين الداخلي.",
         ],
       },
     },
