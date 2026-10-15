@@ -202,7 +202,7 @@ const privacy: Policy = {
           "Helpfulness feedback: if you rate a page or FAQ as helpful or not, we store only that rating and the content id — no free text and nothing that identifies you.",
           "Guide signals: when you use the Ask USAM guide, we store only the resolved destination intent and language — never the words you typed.",
           "Preferences: your language and light/dark theme choices are stored in your browser (local storage), on your device, not on our servers.",
-          "Operational records: your submissions are held in our database, and a queued internal notification record is created for each (containing a reference, not your message body). Our web server keeps standard access and error logs that include technical details such as IP address, timestamp and the page requested; these logs rotate and are retained for a short period (currently on the order of two weeks). Database backups are taken manually rather than on an automated schedule today.",
+          "Operational records: your submissions are held in our database, and a queued internal notification record is created for each (containing a reference, not your message body). Our web server keeps standard access and error logs in the default format — including the visitor's IP address, date and time, the request line, response status, bytes sent, referrer and browser user-agent — rotated daily and retained for about 14 days before deletion. Whether the underlying cloud infrastructure also keeps automated snapshots or backups is [FOR REVIEW — automated backup coverage not yet confirmed; requires AWS-side verification].",
           "We do not run advertising trackers or third-party analytics on this website. See the Cookie Policy for the full inventory.",
         ],
       },
@@ -215,7 +215,7 @@ const privacy: Policy = {
           "تقييم الفائدة: إذا قيّمت صفحة أو سؤالًا شائعًا بأنه مفيد أو غير مفيد، فإننا نحفظ التقييم ومعرّف المحتوى فقط — دون أي نص حر ودون ما يحدد هويتك.",
           "إشارات الدليل: عند استخدام دليل «اسأل يوزم»، نحفظ فقط الوجهة المقصودة واللغة — ولا نحفظ ما كتبته أبدًا.",
           "التفضيلات: تُحفظ لغتك واختيارك للوضع الفاتح/الداكن في متصفحك (التخزين المحلي) على جهازك، لا على خوادمنا.",
-          "السجلات التشغيلية: تُحفظ طلباتك في قاعدة بياناتنا، ويُنشأ سجل إشعار داخلي في قائمة انتظار لكل منها (يحتوي على رقم مرجعي لا على نص رسالتك). ويحتفظ خادم الويب لدينا بسجلات وصول وأخطاء معتادة تتضمن تفاصيل تقنية مثل عنوان IP والوقت والصفحة المطلوبة؛ وتُدوَّر هذه السجلات وتُحفظ لمدة قصيرة (نحو أسبوعين حاليًا). وتُؤخذ النسخ الاحتياطية لقاعدة البيانات يدويًا وليس وفق جدول تلقائي حتى الآن.",
+          "السجلات التشغيلية: تُحفظ طلباتك في قاعدة بياناتنا، ويُنشأ سجل إشعار داخلي في قائمة انتظار لكل منها (يحتوي على رقم مرجعي لا على نص رسالتك). ويحتفظ خادم الويب لدينا بسجلات وصول وأخطاء معتادة بالصيغة الافتراضية — تشمل عنوان IP للزائر والتاريخ والوقت وسطر الطلب وحالة الاستجابة وحجم البيانات والمُحيل ومتصفح المستخدم — تُدوَّر يوميًا وتُحفظ نحو 14 يومًا قبل حذفها. أما إن كانت البنية السحابية الأساسية تحتفظ أيضًا بلقطات أو نسخ احتياطية تلقائية فذلك [للمراجعة — تغطية النسخ الاحتياطي التلقائي غير مؤكدة بعد؛ تتطلب تحققًا من جهة AWS].",
           "لا نشغّل أدوات تتبّع إعلانية ولا تحليلات من أطراف ثالثة على هذا الموقع. راجع سياسة ملفات الارتباط للاطّلاع على الجرد الكامل.",
         ],
       },
@@ -244,7 +244,7 @@ const privacy: Policy = {
         body: [
           "When you continue to a platform (Education, Career, Freelancing, Kids), you leave this website and that platform's own terms and privacy notice apply. A choice you make here does not automatically authorize processing on another platform.",
           "Verified processors used by this website: our cloud hosting provider processes the data on our instructions (the website and its database run on cloud infrastructure in Europe — see International transfers). We do not use third-party analytics or advertising processors on this site.",
-          "Email you send to our privacy contact is handled by our email provider, Google (Google Workspace), which processes that correspondence on our behalf. Any further operational processors are [FOR REVIEW — confirm any additional processors]. The complete, maintained processor list is kept in our internal processor inventory.",
+          "Email sent to our domain is routed to Google (per our mail configuration), so Google processes inbound email on our behalf. The specific privacy mailbox and that it is actively monitored are [FOR REVIEW — confirm the privacy mailbox exists and is monitored]. Any further operational processors are [FOR REVIEW — confirm any additional processors]. The complete, maintained processor list is kept in our internal processor inventory.",
         ],
       },
       ar: {
@@ -252,7 +252,7 @@ const privacy: Policy = {
         body: [
           "عند الانتقال إلى منصة (التعليم أو المسار المهني أو العمل الحر أو الأطفال)، تغادر هذا الموقع وتسري شروط تلك المنصة وإشعار خصوصيتها. والاختيار الذي تتخذه هنا لا يُصرّح تلقائيًا بالمعالجة على منصة أخرى.",
           "المعالِجون المؤكدون لهذا الموقع: يعالج مزوّد الاستضافة السحابية البيانات وفق تعليماتنا (يعمل الموقع وقاعدة بياناته على بنية سحابية في أوروبا — راجع النقل الدولي). ولا نستخدم معالِجي تحليلات أو إعلانات من أطراف ثالثة على هذا الموقع.",
-          "يُعالَج البريد الذي ترسله إلى جهة التواصل للخصوصية عبر مزوّد البريد لدينا، وهو Google‏ (Google Workspace)، الذي يعالج تلك المراسلات نيابةً عنّا. وأي معالِجين تشغيليين إضافيين [للمراجعة — تأكيد أي معالِجين إضافيين]. وتُحفظ قائمة المعالِجين الكاملة والمحدّثة في جرد المعالِجين الداخلي.",
+          "يُوجَّه البريد المُرسَل إلى نطاقنا إلى Google (وفق إعداد البريد لدينا)، لذا يعالج Google البريد الوارد نيابةً عنّا. أما صندوق بريد الخصوصية المحدد وكونه مُراقَبًا فعليًا فذلك [للمراجعة — تأكيد وجود صندوق بريد الخصوصية ومراقبته]. وأي معالِجين تشغيليين إضافيين [للمراجعة — تأكيد أي معالِجين إضافيين]. وتُحفظ قائمة المعالِجين الكاملة والمحدّثة في جرد المعالِجين الداخلي.",
         ],
       },
     },
@@ -262,16 +262,16 @@ const privacy: Policy = {
         heading: "Keeping data and your rights",
         body: [
           "We keep each type of record only as long as needed for its purpose and a reasonable follow-up period. The exact retention periods for enquiries, privacy requests, consent-evidence records and operational logs are [FOR REVIEW — retention periods per record type, to be confirmed by counsel] and will be stated here before publication.",
-          "Important: automated deletion is not yet in place. We will not state a retention period as a promise until the process that enforces it exists; today, removal is handled manually on request. This will be upgraded to an enforced schedule before any specific period is published.",
-          "Subject to the applicable law, you may ask to access, correct or delete your data, or withdraw an optional consent, through the Privacy Requests page. Submitting a request gives you a receipt reference confirming we received it — it is not, by itself, fulfilment. Before we disclose, change or delete anything, a staff member verifies your identity; we never action a disclosure or deletion from an email address alone. Which rights apply and any legal retention exceptions are [FOR REVIEW — applicable rights and exceptions, to be confirmed by counsel].",
+          "Important: we will not state a retention period as a promise until a process that enforces it exists. A documented, authorized and tested deletion procedure is not yet in place; receiving a request and fulfilling it are separate steps, and we describe below only what we can currently do.",
+          "Subject to the applicable law, you may ask to access, correct or delete your data, or withdraw an optional consent, through the Privacy Requests page. Submitting a request gives you a receipt reference confirming we received it — receipt is not fulfilment. Each request is reviewed by our team, and we verify your identity before any disclosure, change or deletion; we never act on an email address alone. The end-to-end fulfilment procedure is still being finalized, so timeframes are not yet guaranteed. Which rights apply and any legal retention exceptions are [FOR REVIEW — applicable rights and exceptions, to be confirmed by counsel].",
         ],
       },
       ar: {
         heading: "حفظ البيانات وحقوقك",
         body: [
           "نحتفظ بكل نوع من السجلات فقط للمدة اللازمة لغرضه ولفترة متابعة معقولة. ومدد الاحتفاظ الدقيقة للاستفسارات وطلبات الخصوصية وسجلات إثبات الموافقة والسجلات التشغيلية [للمراجعة — مدد الاحتفاظ لكل نوع سجل، يؤكدها المستشار القانوني] وستُذكر هنا قبل النشر.",
-          "مهم: الحذف التلقائي غير مُفعّل بعد. ولن نذكر مدة احتفاظ كوعد قبل وجود العملية التي تنفّذها؛ واليوم تتم الإزالة يدويًا عند الطلب. وسيُرقّى ذلك إلى جدول مُنفَّذ قبل نشر أي مدة محددة.",
-          "ووفقًا للقانون المعمول به، يمكنك طلب الاطّلاع على بياناتك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية، عبر صفحة طلبات الخصوصية. ويمنحك تقديم الطلب رقمًا مرجعيًا يؤكد استلامنا له — وهو ليس تنفيذًا بحد ذاته. وقبل أن نُفصح عن أي بيانات أو نغيّرها أو نحذفها، يتحقق موظف من هويتك؛ ولا ننفّذ إفصاحًا أو حذفًا بالاعتماد على البريد الإلكتروني وحده. والحقوق المنطبقة وأي استثناءات قانونية للاحتفاظ [للمراجعة — الحقوق المنطبقة والاستثناءات، يؤكدها المستشار القانوني].",
+          "مهم: لن نذكر مدة احتفاظ كوعد قبل وجود عملية تنفّذها. ولا يوجد بعد إجراء حذف موثّق ومُصرّح به ومُختبَر؛ واستلام الطلب وتنفيذه خطوتان منفصلتان، ونصف أدناه ما يمكننا فعله حاليًا فقط.",
+          "ووفقًا للقانون المعمول به، يمكنك طلب الاطّلاع على بياناتك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية، عبر صفحة طلبات الخصوصية. ويمنحك تقديم الطلب رقمًا مرجعيًا يؤكد استلامنا له — والاستلام ليس تنفيذًا. ويراجع فريقنا كل طلب، ونتحقق من هويتك قبل أي إفصاح أو تغيير أو حذف؛ ولا نتصرّف بالاعتماد على البريد الإلكتروني وحده. وما زال إجراء التنفيذ الكامل قيد الإعداد، لذا فإن المدد الزمنية غير مضمونة بعد. والحقوق المنطبقة وأي استثناءات قانونية للاحتفاظ [للمراجعة — الحقوق المنطبقة والاستثناءات، يؤكدها المستشار القانوني].",
         ],
       },
     },
@@ -789,15 +789,15 @@ const privacyRequests: Policy = {
       en: {
         heading: "How a request is handled",
         body: [
-          "When you submit a request you receive a reference number as a receipt. The request is routed to the responsible staff member for review.",
-          "Before we disclose, change or delete any data, we verify your identity. We do not action a deletion or export based on an email address alone, because that would let someone else act on your data. We may ask you to confirm details that match the enquiry.",
+          "When you submit a request you receive a reference number as a receipt. The request is routed to the responsible staff member for review. The receipt confirms we received your request; it is not confirmation that the requested action has been carried out.",
+          "Before we disclose, change or delete any data, we verify your identity. We do not action a deletion or export based on an email address alone, because that would let someone else act on your data. We may ask you to confirm details that match the enquiry. Our full fulfilment procedure and response timeframes are still being finalized and will be stated here before this policy is published.",
         ],
       },
       ar: {
         heading: "كيف يُعالَج الطلب",
         body: [
-          "عند تقديم طلب تحصل على رقم مرجعي كإيصال. ويُوجَّه الطلب إلى الموظف المسؤول للمراجعة.",
-          "وقبل الإفصاح عن أي بيانات أو تغييرها أو حذفها، نتحقق من هويتك. ولا ننفّذ حذفًا أو تصديرًا بالاعتماد على البريد الإلكتروني وحده، لأن ذلك قد يتيح لغيرك التصرّف ببياناتك. وقد نطلب منك تأكيد تفاصيل تطابق الاستفسار.",
+          "عند تقديم طلب تحصل على رقم مرجعي كإيصال. ويُوجَّه الطلب إلى الموظف المسؤول للمراجعة. ويؤكد الإيصال استلامنا لطلبك؛ وهو ليس تأكيدًا بتنفيذ الإجراء المطلوب.",
+          "وقبل الإفصاح عن أي بيانات أو تغييرها أو حذفها، نتحقق من هويتك. ولا ننفّذ حذفًا أو تصديرًا بالاعتماد على البريد الإلكتروني وحده، لأن ذلك قد يتيح لغيرك التصرّف ببياناتك. وقد نطلب منك تأكيد تفاصيل تطابق الاستفسار. وما زال إجراء التنفيذ الكامل والمدد الزمنية قيد الإعداد وستُذكر هنا قبل نشر هذه السياسة.",
         ],
       },
     },
