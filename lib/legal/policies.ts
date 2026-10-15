@@ -44,6 +44,15 @@ export type PolicySection = {
   id: string;
   en: { heading: string; body: string[] };
   ar: { heading: string; body: string[] };
+  /**
+   * When true, this section states a legal/business COMMITMENT (e.g. retention
+   * period, lawful basis, governing law) that is not yet confirmed. Its `body`
+   * contains internal [FOR REVIEW …] markers and must NOT be shown to the
+   * public verbatim. The public view instead shows the heading plus a short,
+   * user-appropriate "being finalized" note. Informational sections (the
+   * default) are shown in full — they describe how the site actually behaves.
+   */
+  pending?: boolean;
 };
 
 export type Policy = {
@@ -223,17 +232,33 @@ const privacy: Policy = {
     {
       id: "why-and-basis",
       en: {
-        heading: "Why we use it and our legal basis",
+        heading: "Why we use it",
         body: [
           "We use this information to respond to your enquiry and route it to the correct USAM team; to receive and handle privacy requests; to remember your language and theme; to keep an auditable record of the choices you make here; to understand, in aggregate, where visitors want to go; and to operate and secure the website.",
-          "The specific lawful basis for each purpose under the applicable Egyptian and Saudi data-protection frameworks is [FOR REVIEW — lawful basis per purpose, to be confirmed by counsel]. We do not treat acknowledging this notice as blanket consent for unrelated processing.",
+          "We do not treat acknowledging this notice as blanket consent for unrelated processing.",
         ],
       },
       ar: {
-        heading: "لماذا نستخدمها وأساسنا القانوني",
+        heading: "لماذا نستخدمها",
         body: [
           "نستخدم هذه المعلومات للرد على استفسارك وتوجيهه إلى فريق يوزم المناسب؛ ولاستلام طلبات الخصوصية ومعالجتها؛ ولتذكّر لغتك ومظهرك؛ وللاحتفاظ بسجل قابل للمراجعة لاختياراتك هنا؛ ولفهم وجهة الزوّار بشكل إجمالي؛ ولتشغيل الموقع وتأمينه.",
-          "الأساس القانوني لكل غرض بموجب الأطر المصرية والسعودية لحماية البيانات [للمراجعة — الأساس القانوني لكل غرض، يؤكده المستشار القانوني]. ولا نعتبر الإقرار بهذا الإشعار موافقةً شاملةً على معالجات غير ذات صلة.",
+          "ولا نعتبر الإقرار بهذا الإشعار موافقةً شاملةً على معالجات غير ذات صلة.",
+        ],
+      },
+    },
+    {
+      id: "legal-basis",
+      pending: true,
+      en: {
+        heading: "Our legal basis",
+        body: [
+          "The specific lawful basis for each purpose under the applicable Egyptian and Saudi data-protection frameworks is [FOR REVIEW — lawful basis per purpose, to be confirmed by counsel].",
+        ],
+      },
+      ar: {
+        heading: "أساسنا القانوني",
+        body: [
+          "الأساس القانوني لكل غرض بموجب الأطر المصرية والسعودية لحماية البيانات [للمراجعة — الأساس القانوني لكل غرض، يؤكده المستشار القانوني].",
         ],
       },
     },
@@ -261,17 +286,31 @@ const privacy: Policy = {
       en: {
         heading: "Keeping data and your rights",
         body: [
-          "We keep each type of record only as long as needed for its purpose and a reasonable follow-up period. The exact retention periods for enquiries, privacy requests, consent-evidence records and operational logs are [FOR REVIEW — retention periods per record type, to be confirmed by counsel] and will be stated here before publication.",
-          "Important: we will not state a retention period as a promise until a process that enforces it exists. A documented, authorized and tested deletion procedure is not yet in place; receiving a request and fulfilling it are separate steps, and we describe below only what we can currently do.",
-          "Subject to the applicable law, you may ask to access, correct or delete your data, or withdraw an optional consent, through the Privacy Requests page. Submitting a request gives you a receipt reference confirming we received it — receipt is not fulfilment. Each request is reviewed by our team, and we verify your identity before any disclosure, change or deletion; we never act on an email address alone. The end-to-end fulfilment procedure is still being finalized, so timeframes are not yet guaranteed. Which rights apply and any legal retention exceptions are [FOR REVIEW — applicable rights and exceptions, to be confirmed by counsel].",
+          "We keep each type of record only as long as needed for its purpose and a reasonable follow-up period. We will not state a specific retention period as a promise until a process that enforces it is in place; a documented, authorized and tested deletion procedure is not yet in place.",
+          "You may ask to access, correct or delete your data, or withdraw an optional consent, through the Privacy Requests page. Submitting a request gives you a receipt reference confirming we received it — receipt is not fulfilment. Each request is reviewed by our team, and we verify your identity before any disclosure, change or deletion; we never act on an email address alone. The end-to-end fulfilment procedure and response timeframes are still being finalized.",
         ],
       },
       ar: {
         heading: "حفظ البيانات وحقوقك",
         body: [
-          "نحتفظ بكل نوع من السجلات فقط للمدة اللازمة لغرضه ولفترة متابعة معقولة. ومدد الاحتفاظ الدقيقة للاستفسارات وطلبات الخصوصية وسجلات إثبات الموافقة والسجلات التشغيلية [للمراجعة — مدد الاحتفاظ لكل نوع سجل، يؤكدها المستشار القانوني] وستُذكر هنا قبل النشر.",
-          "مهم: لن نذكر مدة احتفاظ كوعد قبل وجود عملية تنفّذها. ولا يوجد بعد إجراء حذف موثّق ومُصرّح به ومُختبَر؛ واستلام الطلب وتنفيذه خطوتان منفصلتان، ونصف أدناه ما يمكننا فعله حاليًا فقط.",
-          "ووفقًا للقانون المعمول به، يمكنك طلب الاطّلاع على بياناتك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية، عبر صفحة طلبات الخصوصية. ويمنحك تقديم الطلب رقمًا مرجعيًا يؤكد استلامنا له — والاستلام ليس تنفيذًا. ويراجع فريقنا كل طلب، ونتحقق من هويتك قبل أي إفصاح أو تغيير أو حذف؛ ولا نتصرّف بالاعتماد على البريد الإلكتروني وحده. وما زال إجراء التنفيذ الكامل قيد الإعداد، لذا فإن المدد الزمنية غير مضمونة بعد. والحقوق المنطبقة وأي استثناءات قانونية للاحتفاظ [للمراجعة — الحقوق المنطبقة والاستثناءات، يؤكدها المستشار القانوني].",
+          "نحتفظ بكل نوع من السجلات فقط للمدة اللازمة لغرضه ولفترة متابعة معقولة. ولن نذكر مدة احتفاظ محددة كوعد قبل وجود عملية تنفّذها؛ ولا يوجد بعد إجراء حذف موثّق ومُصرّح به ومُختبَر.",
+          "ويمكنك طلب الاطّلاع على بياناتك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية، عبر صفحة طلبات الخصوصية. ويمنحك تقديم الطلب رقمًا مرجعيًا يؤكد استلامنا له — والاستلام ليس تنفيذًا. ويراجع فريقنا كل طلب، ونتحقق من هويتك قبل أي إفصاح أو تغيير أو حذف؛ ولا نتصرّف بالاعتماد على البريد الإلكتروني وحده. وما زال إجراء التنفيذ الكامل والمدد الزمنية قيد الإعداد.",
+        ],
+      },
+    },
+    {
+      id: "retention-rights-pending",
+      pending: true,
+      en: {
+        heading: "Exact retention periods and applicable rights",
+        body: [
+          "The exact retention periods per record type, the specific rights available, and any legal retention exceptions are [FOR REVIEW — retention periods and applicable rights/exceptions, to be confirmed by counsel].",
+        ],
+      },
+      ar: {
+        heading: "مدد الاحتفاظ الدقيقة والحقوق المنطبقة",
+        body: [
+          "مدد الاحتفاظ الدقيقة لكل نوع سجل، والحقوق المتاحة تحديدًا، وأي استثناءات قانونية للاحتفاظ [للمراجعة — مدد الاحتفاظ والحقوق/الاستثناءات، يؤكدها المستشار القانوني].",
         ],
       },
     },
@@ -873,8 +912,15 @@ export function localizedPolicy(policy: Policy, locale: Locale) {
       id: s.id,
       heading: s[locale].heading,
       body: s[locale].body,
+      pending: s.pending === true,
     })),
   };
 }
 
 export type LocalizedPolicy = ReturnType<typeof localizedPolicy>;
+
+/** The user-facing note shown in place of a pending section's unconfirmed body. */
+export const PENDING_SECTION_NOTE = {
+  en: "This part is being finalized and will be added here once confirmed. It does not change how the website works today.",
+  ar: "يجري الانتهاء من هذا الجزء وسيُضاف هنا بعد اعتماده. وهو لا يغيّر طريقة عمل الموقع حاليًا.",
+} as const;

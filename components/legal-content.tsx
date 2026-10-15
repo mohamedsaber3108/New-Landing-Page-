@@ -35,7 +35,7 @@ const ui = {
     effective: "Effective",
     updated: "Last updated",
     notPublished:
-      "This policy is being finalized and is under legal review. Its text is not published yet, so it is not shown here. Any functional controls on this page remain available.",
+      "This is a working version for transparency. The content below describes how the website operates today. A few clauses marked \"Being finalized\" are still under legal review and are not yet binding commitments.",
     published: "Published",
     reviewNote:
       "Policies marked Draft are being finalized under legal review and are not published yet. Published policies show their version and effective date.",
@@ -54,7 +54,7 @@ const ui = {
     effective: "تاريخ السريان",
     updated: "آخر تحديث",
     notPublished:
-      "هذه السياسة قيد الإعداد وتحت المراجعة القانونية. ولم يُنشر نصها بعد، لذا لا يُعرض هنا. وتبقى أي أدوات وظيفية في هذه الصفحة متاحة.",
+      "هذه نسخة عاملة لأغراض الشفافية. ويصف المحتوى أدناه كيفية عمل الموقع اليوم. وبعض البنود الموسومة بـ«قيد الإعداد» ما زالت تحت المراجعة القانونية وليست التزامات مُلزِمة بعد.",
     published: "منشور",
     reviewNote:
       "السياسات الموسومة «مسودة» قيد الإعداد تحت المراجعة القانونية ولم تُنشر بعد. أما السياسات المنشورة فتعرض إصدارها وتاريخ سريانها.",
@@ -67,36 +67,46 @@ const ui = {
 
 type LocalPolicy = ReturnType<typeof localizedPolicy>;
 
+const PENDING_NOTE: Record<Locale, string> = {
+  en: "This part is being finalized and will be added here once confirmed. It does not change how the website works today.",
+  ar: "يجري الانتهاء من هذا الجزء وسيُضاف هنا بعد اعتماده. وهو لا يغيّر طريقة عمل الموقع حاليًا.",
+};
+
+/** Strip an internal review marker from a public string (mirror of the server). */
+function stripMarkers(text: string): string {
+  if (/^\s*\[(FOR REVIEW|للمراجعة)[^\]]*\]\s*$/u.test(text)) return "";
+  const neutral = /[\u0600-\u06FF]/.test(text) ? "(قيد الإعداد)" : "(being finalized)";
+  return text.replace(/\[(FOR REVIEW|للمراجعة)[^\]]*\]/gu, neutral).replace(/\s{2,}/g, " ").trim();
+}
+
+type ShownSection = { id: string; heading: string; body: string[]; pending: boolean };
+
 /**
  * Public redaction mirror of the server's publicPolicyView: for a DRAFT policy,
- * strip all section bodies and the version string and show only a neutral
- * "being finalized" notice. Published policies pass through unchanged. This
- * guarantees the client never renders provisional text or "[REQUIRES ...]"
- * placeholders before/without the API response.
+ * show real informational content, replace `pending` commitment sections with a
+ * short note, and strip any inline [FOR REVIEW …] marker so nothing internal
+ * leaks before/without the API response. Published policies pass through.
  */
-function redactForPublic(doc: LocalPolicy, locale: Locale): LocalPolicy {
-  if (doc.approval === "published") return doc;
-  const notice =
-    locale === "ar"
-      ? {
-          heading: "قيد الإعداد",
-          body: [
-            "تُراجَع هذه السياسة قانونيًا وستُنشر قريبًا. ولا يُعرض نصها المبدئي هنا حتى اعتماده.",
-            "للأسئلة المتعلقة بالخصوصية أو لممارسة حقوقك، استخدم صفحة «طلبات الخصوصية».",
-          ],
-        }
-      : {
-          heading: "Being finalized",
-          body: [
-            "This policy is under legal review and will be published shortly. Its provisional text is not shown here until it is approved.",
-            "For privacy questions or to exercise your rights, use the Privacy Requests page.",
-          ],
-        };
+function redactForPublic(doc: LocalPolicy, locale: Locale): LocalPolicy & { sections: ShownSection[] } {
+  const asShown = (sections: LocalPolicy["sections"]): ShownSection[] =>
+    sections.map((s) => ({ ...s, pending: (s as { pending?: boolean }).pending === true }));
+  if (doc.approval === "published") {
+    return { ...doc, sections: asShown(doc.sections) };
+  }
+  const sections: ShownSection[] = asShown(doc.sections)
+    .map((s) =>
+      s.pending
+        ? { ...s, body: [PENDING_NOTE[locale]] }
+        : { ...s, body: s.body.map(stripMarkers).filter((p) => p.trim().length > 0) },
+    )
+    .filter((s) => s.body.length > 0);
   return {
     ...doc,
     version: "",
     effectiveAt: null,
-    sections: [{ id: "status", heading: notice.heading, body: notice.body }],
+    scope: stripMarkers(doc.scope),
+    appliesTo: stripMarkers(doc.appliesTo),
+    sections,
   };
 }
 
@@ -208,10 +218,11 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
           effectiveAt: d.effectiveAt ?? baseline.effectiveAt,
           approval: d.approval ?? baseline.approval,
           sections: Array.isArray(d.sections)
-            ? d.sections.map((s: { id: string; title: string; body: string }) => ({
+            ? d.sections.map((s: { id: string; title: string; body: string; pending?: boolean }) => ({
                 id: s.id,
                 heading: s.title,
                 body: typeof s.body === "string" ? s.body.split("\n\n") : [],
+                pending: s.pending === true,
               }))
             : baseline.sections,
         });
@@ -272,14 +283,20 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
       </nav>
 
       <div className="legal-sections">
-        {doc.sections.map((s) => (
-          <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`}>
-            <h2 id={`${s.id}-h`}>{s.heading}</h2>
-            {s.body.map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
-          </section>
-        ))}
+        {doc.sections.map((s) => {
+          const pending = (s as { pending?: boolean }).pending === true;
+          return (
+            <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className={pending ? "legal-section-pending" : undefined}>
+              <h2 id={`${s.id}-h`}>
+                {s.heading}
+                {pending && <span className="legal-pending-tag">{locale === "ar" ? "قيد الإعداد" : "Being finalized"}</span>}
+              </h2>
+              {s.body.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </section>
+          );
+        })}
       </div>
 
       {/* Functional tools stay available regardless of policy approval state —

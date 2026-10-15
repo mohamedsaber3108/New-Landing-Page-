@@ -115,6 +115,7 @@ export async function publicLegal(type: LegalType, locale: Locale) {
       id: s.id,
       title: s.heading,
       body: s.body.join("\n\n"),
+      pending: (s as { pending?: boolean }).pending === true,
     })),
     approval: policy.approval,
     version: policy.version,

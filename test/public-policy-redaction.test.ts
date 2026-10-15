@@ -55,15 +55,24 @@ describe("publicPolicyView redaction", () => {
     if (!view) return;
     expect(view.approval).toBe("draft");
     expect(view.version).toBe("");
-    // Exactly one neutral status section; no draft body text.
-    expect(view.sections).toHaveLength(1);
-    expect(view.sections[0].id).toBe("status");
+    // A draft now shows READABLE informational content (not a single blank
+    // status page) — several sections survive.
+    expect(view.sections.length).toBeGreaterThan(3);
     const blob = JSON.stringify(view);
-    // No internal placeholders leak publicly.
+    // But NO internal review markers leak, in either language.
+    expect(blob).not.toContain("FOR REVIEW");
+    expect(blob).not.toContain("للمراجعة");
     expect(blob).not.toContain("REQUIRES LEGAL REVIEW");
-    expect(blob).not.toContain("REQUIRES CONFIGURATION");
-    // No baseline draft body phrases leak (sample from the privacy baseline).
-    expect(blob).not.toContain("Enquiry data");
+    // Real informational content IS shown (sample phrases from the baseline).
+    expect(blob).toContain("Egyptian limited liability company");
+    expect(blob).toContain("discover the right USAM platform");
+    // Commitment sections are flagged pending and carry the neutral note, not
+    // an invented legal statement.
+    const basis = view.sections.find((s) => s.id === "legal-basis");
+    expect(basis?.pending).toBe(true);
+    expect(basis?.body.join(" ")).toContain("being finalized");
+    const retention = view.sections.find((s) => s.id === "retention-rights-pending");
+    expect(retention?.pending).toBe(true);
   });
 
   it("returns the FULL text once a consistent EN+AR release is published", async () => {
@@ -96,7 +105,9 @@ describe("publicPolicyView redaction", () => {
       createdAt: new Date().toISOString(),
     });
     const view = await publicPolicyView("privacy", "en");
-    expect(view?.approval).toBe("draft"); // not consistently published
-    expect(view?.sections[0].id).toBe("status");
+    // Not consistently published (EN published, AR not) → treated as draft, and
+    // no internal markers leak.
+    expect(view?.approval).toBe("draft");
+    expect(JSON.stringify(view)).not.toContain("FOR REVIEW");
   });
 });

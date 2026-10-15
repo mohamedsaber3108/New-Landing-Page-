@@ -11,6 +11,7 @@ import type { Db } from "@/lib/api/idempotency";
 import {
   getPolicy,
   localizedPolicy,
+  PENDING_SECTION_NOTE,
   POLICY_TYPES,
   type LocalizedPolicy,
   type Locale,
@@ -88,23 +89,30 @@ export async function publicPolicyView(
   if (!resolved) return null;
   if (resolved.approval === "published") return resolved;
 
-  // Draft: strip the body entirely and present a single neutral notice section.
-  const notice =
-    locale === "ar"
-      ? {
-          heading: "قيد الإعداد",
-          body: [
-            "تُراجَع هذه السياسة قانونيًا وستُنشر قريبًا. ولا يُعرض نصها المبدئي هنا حتى اعتماده.",
-            "للأسئلة المتعلقة بالخصوصية أو لممارسة حقوقك، استخدم صفحة «طلبات الخصوصية».",
-          ],
-        }
-      : {
-          heading: "Being finalized",
-          body: [
-            "This policy is under legal review and will be published shortly. Its provisional text is not shown here until it is approved.",
-            "For privacy questions or to exercise your rights, use the Privacy Requests page.",
-          ],
-        };
+  // DRAFT: show the real, readable content rather than blanking the page, while
+  // (a) never exposing internal "[FOR REVIEW …]"/"[للمراجعة …]" markers, and
+  // (b) not presenting unconfirmed legal COMMITMENTS as final.
+  //
+  //  - A section flagged `pending` is a commitment awaiting counsel/business
+  //    input: we replace its body with a short, user-appropriate note.
+  //  - Any other section is informational (describes real behavior): we show it,
+  //    but defensively strip any inline [FOR REVIEW …] fragment (and drop a
+  //    paragraph that is ONLY such a marker) so a stray token never leaks.
+  const pendingNote = locale === "ar" ? PENDING_SECTION_NOTE.ar : PENDING_SECTION_NOTE.en;
+
+  const sections = resolved.sections
+    .map((s) => {
+      if (s.pending) {
+        return { id: s.id, heading: s.heading, body: [pendingNote], pending: true };
+      }
+      const body = s.body
+        .map(stripReviewMarkers)
+        .filter((p) => p.trim().length > 0);
+      return { id: s.id, heading: s.heading, body, pending: false };
+    })
+    // Drop any section that ended up with no shown content.
+    .filter((s) => s.body.length > 0);
+
   return {
     type: resolved.type,
     path: resolved.path,
@@ -114,11 +122,27 @@ export async function publicPolicyView(
     updatedAt: resolved.updatedAt,
     approval: "draft",
     title: resolved.title,
-    scope: resolved.scope,
-    appliesTo: resolved.appliesTo,
+    scope: stripReviewMarkers(resolved.scope),
+    appliesTo: stripReviewMarkers(resolved.appliesTo),
     audience: resolved.audience,
-    sections: [{ id: "status", heading: notice.heading, body: notice.body }],
+    sections,
   };
+}
+
+/**
+ * Remove internal review markers from a public string. A paragraph that is
+ * ONLY a marker becomes empty (and is filtered out by the caller); a marker
+ * embedded in otherwise-real text is replaced with a short, neutral phrase so
+ * the surrounding factual content still reads.
+ */
+function stripReviewMarkers(text: string): string {
+  const neutralEn = "(being finalized)";
+  const neutralAr = "(قيد الإعداد)";
+  // If the whole paragraph is just a marker, blank it.
+  if (/^\s*\[(FOR REVIEW|للمراجعة)[^\]]*\]\s*$/u.test(text)) return "";
+  // Otherwise replace any embedded marker in place.
+  const neutral = /[\u0600-\u06FF]/.test(text) ? neutralAr : neutralEn;
+  return text.replace(/\[(FOR REVIEW|للمراجعة)[^\]]*\]/gu, neutral).replace(/\s{2,}/g, " ").trim();
 }
 
 /**
