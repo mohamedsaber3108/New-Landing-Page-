@@ -33,4 +33,5 @@ export const SITEMAP_PATHS = [
   "/ai-use",
   "/privacy-requests",
   "/status",
+  "/sitemap",
 ] as const;

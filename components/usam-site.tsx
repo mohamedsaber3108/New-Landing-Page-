@@ -44,6 +44,7 @@ const arabicRoutes: Record<string, { title: string; label: string; intro: string
   "ai-use": { title: "الذكاء الاصطناعي واستخدام البيانات.", label: "قانوني", intro: "ما يفعله دليل «اسأل يوزم» بما تكتبه، وكيف يُفصح عن الذكاء الاصطناعي في المنصات." },
   "privacy-requests": { title: "طلبات الخصوصية والتواصل.", label: "قانوني", intro: "مارس حقوقك على البيانات التي يحتفظ بها هذا الموقع، مع التحقق من الهوية." },
   status: { title: "توافر المنتجات.", label: "الحالة", intro: "يحافظ كل منتج من منتجات يوزم على تجربته وحالته الخاصة." },
+  sitemap: { title: "خريطة الموقع.", label: "خريطة الموقع", intro: "دليل مقروء لكل صفحات موقع يوزم الرئيسي، مُجمّعة حسب القسم." },
 };
 
 const focusByPage: Record<string, ProductId[]> = { "for-individuals": ["education", "career", "freelancing"], "for-enterprises": ["freelancing", "career", "education"], government: ["education", "career", "kids"], kids: ["kids"], "for-talent": ["career", "freelancing"], trust: ["kids", "education"], pricing: ["education", "career", "freelancing", "kids"] };
@@ -108,15 +109,20 @@ function InfoPage({ slug, locale, onGuide }: { slug: string; locale: Locale; onG
 
 function Footer({ locale }: { locale: Locale }) {
   const isArabic = locale === "ar";
+  // All eight legal destinations live together under one "Legal & Privacy"
+  // group — including AI & Data Use and Privacy Requests (previously in the
+  // separate utility row).
   const legalLinks = [
     { href: "/legal", en: "Legal Center", ar: "المركز القانوني" },
-    { href: "/privacy", en: "Privacy", ar: "الخصوصية" },
-    { href: "/terms", en: "Terms", ar: "الشروط" },
-    { href: "/cookies", en: "Cookies", ar: "ملفات الارتباط" },
+    { href: "/privacy", en: "Privacy Policy", ar: "سياسة الخصوصية" },
+    { href: "/terms", en: "Terms of Use", ar: "شروط الاستخدام" },
+    { href: "/cookies", en: "Cookie Policy", ar: "سياسة ملفات الارتباط" },
     { href: "/refunds", en: "Refunds & Cancellations", ar: "الاسترداد والإلغاء" },
     { href: "/payments", en: "Payment Security", ar: "أمان الدفع" },
+    { href: "/ai-use", en: "AI & Data Use", ar: "الذكاء الاصطناعي والبيانات" },
+    { href: "/privacy-requests", en: "Privacy Requests", ar: "طلبات الخصوصية" },
   ];
-  return <footer className="site-footer section-shell"><div><Mark /><p>{isArabic ? "تعلم · تطوّر · أنجز · اكتشف" : "Learn · Grow · Work · Discover"}</p></div><div><span>{isArabic ? "استكشف" : "Explore"}</span><Link href="/for-individuals">{copy[locale].individuals}</Link><Link href="/for-enterprises">{copy[locale].enterprises}</Link><Link href="/government">{copy[locale].government}</Link><Link href="/kids">{isArabic ? "الأطفال وأولياء الأمور" : "Kids & Parents"}</Link></div><div><span>{copy[locale].products}</span>{products.map((product) => <a key={product.id} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{isArabic ? product.arabicName : product.name}</a>)}</div><div><span>USAM</span><Link href="/about">{isArabic ? "عن يوزم" : "About"}</Link><Link href="/trust">{isArabic ? "الثقة" : "Trust"}</Link><Link href="/faq">{isArabic ? "الأسئلة الشائعة" : "FAQ"}</Link><Link href="/contact">{isArabic ? "تواصل" : "Contact"}</Link></div><div className="footer-legal"><span>{isArabic ? "قانوني" : "Legal"}</span>{legalLinks.map((l) => <Link key={l.href} href={l.href}>{isArabic ? l.ar : l.en}</Link>)}<button type="button" className="footer-cookie-btn" onClick={() => openCookieSettings()}>{isArabic ? "إعدادات ملفات الارتباط" : "Cookie Settings"}</button></div><nav className="footer-utility" aria-label={isArabic ? "روابط إضافية" : "Additional information"}>{[{href:"/how-it-works",en:"How it works",ar:"كيف تعمل يوزم"},{href:"/pricing",en:"Pricing",ar:"الأسعار"},{href:"/guide",en:"Guide",ar:"الدليل"},{href:"/ai-use",en:"AI & Data Use",ar:"الذكاء الاصطناعي والبيانات"},{href:"/privacy-requests",en:"Privacy Requests",ar:"طلبات الخصوصية"},{href:"/status",en:"Status",ar:"حالة الخدمات"}].map(l=><Link key={l.href} href={l.href}>{isArabic?l.ar:l.en}</Link>)}</nav><small>{isArabic ? "© 2026 يوزم. منظومة واحدة مترابطة." : "© 2026 USAM. One connected ecosystem."}</small></footer>;
+  return <footer className="site-footer section-shell"><div><Mark /><p>{isArabic ? "تعلم · تطوّر · أنجز · اكتشف" : "Learn · Grow · Work · Discover"}</p></div><div><span>{isArabic ? "استكشف" : "Explore"}</span><Link href="/for-individuals">{copy[locale].individuals}</Link><Link href="/for-enterprises">{copy[locale].enterprises}</Link><Link href="/government">{copy[locale].government}</Link><Link href="/kids">{isArabic ? "الأطفال وأولياء الأمور" : "Kids & Parents"}</Link></div><div><span>{copy[locale].products}</span>{products.map((product) => <a key={product.id} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{isArabic ? product.arabicName : product.name}</a>)}</div><div><span>USAM</span><Link href="/about">{isArabic ? "عن يوزم" : "About"}</Link><Link href="/trust">{isArabic ? "الثقة" : "Trust"}</Link><Link href="/faq">{isArabic ? "الأسئلة الشائعة" : "FAQ"}</Link><Link href="/contact">{isArabic ? "تواصل" : "Contact"}</Link></div><div className="footer-legal"><span>{isArabic ? "القانون والخصوصية" : "Legal & Privacy"}</span>{legalLinks.map((l) => <Link key={l.href} href={l.href}>{isArabic ? l.ar : l.en}</Link>)}<button type="button" className="footer-cookie-btn" onClick={() => openCookieSettings()}>{isArabic ? "إعدادات ملفات الارتباط" : "Cookie Settings"}</button></div><nav className="footer-utility" aria-label={isArabic ? "روابط إضافية" : "Additional information"}>{[{href:"/how-it-works",en:"How it works",ar:"كيف تعمل يوزم"},{href:"/pricing",en:"Pricing",ar:"الأسعار"},{href:"/guide",en:"Guide",ar:"الدليل"},{href:"/status",en:"Status",ar:"حالة الخدمات"},{href:"/privacy-requests",en:"Your Privacy Choices",ar:"اختيارات الخصوصية"},{href:"/sitemap",en:"Sitemap",ar:"خريطة الموقع"}].map(l=><Link key={l.href} href={l.href}>{isArabic?l.ar:l.en}</Link>)}</nav><small>{isArabic ? "© 2026 يوزم. منظومة واحدة مترابطة." : "© 2026 USAM. One connected ecosystem."}</small></footer>;
 }
 
 export function USAMSite({ kind = "home", slug }: { kind?: RouteKind; slug?: string }) {

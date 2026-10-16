@@ -16,16 +16,17 @@
 // accept), bilingual, RTL-aware via logical CSS, theme-aware via tokens. The
 // banner sits above content but is positioned so it does not cover Ask USAM.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "./nav-link";
 import {
-  CONSENT_VERSION,
-  OPTIONAL_TECHS,
+  STORAGE_ITEMS,
   acceptAll,
   activeOptionalCategories,
   hasOptionalTech,
   readChoice,
   recordCookieConsentServerSide,
   rejectAll,
+  resetSavedPreferences,
   setChoice,
   shouldShowBanner,
   type ConsentChoice,
@@ -51,11 +52,23 @@ const t = {
     necessaryBody:
       "Always on. Remembers your language, theme, and your cookie choice. Not used for advertising, and never sent to a third-party tracker.",
     onlyNecessary:
-      "This website currently uses only necessary and functional storage. There are no optional analytics or marketing technologies to turn on, so there is nothing optional to accept or reject here.",
+      "This website uses only necessary and functional storage — the small items listed below. There are no optional analytics, advertising, or third-party tracking technologies, so there is nothing optional to accept or reject.",
     reviewPolicy: "Read the full Cookie Policy",
+    privacyPolicy: "Privacy Policy",
     on: "On",
     saved: "Preferences saved.",
     close: "Close",
+    done: "Done",
+    whatWeStore: "What this site stores",
+    colItem: "Item",
+    colPurpose: "Purpose",
+    colStores: "Stored in",
+    colDuration: "Kept for",
+    resetBtn: "Reset saved preferences",
+    resetHelp:
+      "Removes only USAM's language, theme and cookie-choice entries from this browser. Nothing else is touched. Your language and theme return to the default on the next visit.",
+    resetDoneSome: "Reset done. Removed:",
+    resetDoneNone: "Nothing to reset — no USAM preferences are stored.",
   },
   ar: {
     bannerTitle: "اختياراتك لملفات الارتباط",
@@ -70,11 +83,23 @@ const t = {
     necessaryBody:
       "مفعّل دائمًا. يتذكّر لغتك ومظهرك واختيارك لملفات الارتباط. ولا يُستخدم للإعلانات، ولا يُرسل إلى أداة تتبّع من طرف ثالث.",
     onlyNecessary:
-      "يستخدم هذا الموقع حاليًا تخزينًا ضروريًا ووظيفيًا فقط. ولا توجد تقنيات تحليلات أو تسويق اختيارية لتفعيلها، لذا لا يوجد اختياري لقبوله أو رفضه هنا.",
+      "يستخدم هذا الموقع تخزينًا ضروريًا ووظيفيًا فقط — العناصر الصغيرة المذكورة أدناه. ولا توجد تقنيات تحليلات أو إعلانات أو تتبّع من أطراف ثالثة، لذا لا يوجد اختياري لقبوله أو رفضه.",
     reviewPolicy: "اقرأ سياسة ملفات الارتباط كاملة",
+    privacyPolicy: "سياسة الخصوصية",
     on: "مفعّل",
     saved: "تم حفظ التفضيلات.",
     close: "إغلاق",
+    done: "تم",
+    whatWeStore: "ما يخزّنه هذا الموقع",
+    colItem: "العنصر",
+    colPurpose: "الغرض",
+    colStores: "مكان التخزين",
+    colDuration: "مدة الحفظ",
+    resetBtn: "إعادة ضبط التفضيلات المحفوظة",
+    resetHelp:
+      "يزيل فقط إدخالات يوزم الخاصة باللغة والمظهر واختيار ملفات الارتباط من هذا المتصفح. ولا يُمَس أي شيء آخر. وتعود لغتك ومظهرك إلى الوضع الافتراضي في الزيارة التالية.",
+    resetDoneSome: "تمت إعادة الضبط. أُزيل:",
+    resetDoneNone: "لا شيء لإعادة ضبطه — لا توجد تفضيلات ليوزم مخزّنة.",
   },
 } as const;
 
@@ -177,15 +202,22 @@ function CategoryToggles({
  * Always-available settings surface. Embedded in the Cookie Policy page and
  * opened from the footer. Reports honestly when only necessary storage exists.
  */
-export function CookieSettingsPanel({ locale }: { locale: Locale }) {
+export function CookieSettingsPanel({ locale, onDone }: { locale: Locale; onDone?: () => void }) {
   const L = t[locale];
   const [saved, setSaved] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
 
   const optional = hasOptionalTech();
+
+  const doReset = () => {
+    const removed = resetSavedPreferences();
+    setResetMsg(removed.length ? `${L.resetDoneSome} ${removed.join(", ")}` : L.resetDoneNone);
+  };
 
   return (
     <div className="cookie-settings" id="cookie-settings">
       <h3>{L.settingsTitle}</h3>
+
       <div className="cookie-category cookie-category-locked">
         <div>
           <strong>{L.necessary}</strong>
@@ -215,11 +247,44 @@ export function CookieSettingsPanel({ locale }: { locale: Locale }) {
           {L.saved}
         </p>
       )}
-      <p className="cookie-version">
-        <bdi>
-          {OPTIONAL_TECHS.length} optional · v{CONSENT_VERSION}
-        </bdi>
+
+      {/* Honest, user-facing inventory of exactly what is stored. */}
+      <h4 className="cookie-storage-title">{L.whatWeStore}</h4>
+      <div className="cookie-storage-table" role="table" aria-label={L.whatWeStore}>
+        <div className="cookie-storage-row cookie-storage-head" role="row">
+          <span role="columnheader">{L.colItem}</span>
+          <span role="columnheader">{L.colPurpose}</span>
+          <span role="columnheader">{L.colStores}</span>
+          <span role="columnheader">{L.colDuration}</span>
+        </div>
+        {STORAGE_ITEMS.map((item) => (
+          <div className="cookie-storage-row" role="row" key={item.key}>
+            <span role="cell"><code>{item.key}</code></span>
+            <span role="cell">{item.purpose[locale]}</span>
+            <span role="cell">{item.storage[locale]}</span>
+            <span role="cell">{item.duration[locale]}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Policy links. */}
+      <p className="cookie-links">
+        <Link href="/cookies">{L.reviewPolicy}</Link>
+        <Link href="/privacy">{L.privacyPolicy}</Link>
       </p>
+
+      {/* Narrowly-scoped reset — only USAM's documented keys. */}
+      <div className="cookie-reset">
+        <button type="button" className="cookie-btn" onClick={doReset}>{L.resetBtn}</button>
+        <p className="cookie-reset-help">{L.resetHelp}</p>
+        {resetMsg && <p className="cookie-saved" role="status" aria-live="polite">{resetMsg}</p>}
+      </div>
+
+      {onDone && (
+        <div className="cookie-done-row">
+          <button type="button" className="cookie-btn cookie-btn-strong" onClick={onDone}>{L.done}</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -231,6 +296,8 @@ export function CookieSettingsPanel({ locale }: { locale: Locale }) {
 export function CookieSettingsModal({ locale }: { locale: Locale }) {
   const L = t[locale];
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const openit = () => setOpen(true);
@@ -238,12 +305,51 @@ export function CookieSettingsModal({ locale }: { locale: Locale }) {
     return () => window.removeEventListener(OPEN_COOKIE_SETTINGS_EVENT, openit);
   }, []);
 
+  // While open: lock background scroll, remember the trigger to restore focus,
+  // move focus into the dialog, trap Tab, and close on Escape.
   useEffect(() => {
+    if (!open) return;
+    restoreFocusRef.current = document.activeElement as HTMLElement;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const dialog = dialogRef.current;
+    const focusables = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input,[tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => el.offsetParent !== null);
+    // Focus the first control after mount.
+    const first = focusables()[0];
+    first?.focus();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (e.key === "Tab") {
+        const items = focusables();
+        if (items.length === 0) return;
+        const firstEl = items[0];
+        const lastEl = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        } else if (!e.shiftKey && document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
     };
-    if (open) window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+      // Restore focus to whatever opened the dialog.
+      restoreFocusRef.current?.focus?.();
+    };
   }, [open]);
 
   if (!open) return null;
@@ -251,6 +357,7 @@ export function CookieSettingsModal({ locale }: { locale: Locale }) {
   return (
     <div className="cookie-modal-backdrop" onClick={() => setOpen(false)}>
       <div
+        ref={dialogRef}
         className="cookie-modal"
         role="dialog"
         aria-modal="true"
@@ -261,7 +368,7 @@ export function CookieSettingsModal({ locale }: { locale: Locale }) {
         <button type="button" className="cookie-modal-close" onClick={() => setOpen(false)} aria-label={L.close}>
           ×
         </button>
-        <CookieSettingsPanel locale={locale} />
+        <CookieSettingsPanel locale={locale} onDone={() => setOpen(false)} />
       </div>
     </div>
   );

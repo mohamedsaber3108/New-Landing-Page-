@@ -122,4 +122,5 @@ export const routes: Record<string, { title: string; label: string; intro: strin
   "ai-use": { title: "AI & Data Use.", label: "LEGAL", intro: "What the Ask USAM guide does with what you type, and how platform AI is disclosed." },
   "privacy-requests": { title: "Privacy Requests & Contact.", label: "LEGAL", intro: "Exercise your data rights for information this website holds, with identity verification." },
   status: { title: "Product availability.", label: "STATUS", intro: "Each USAM product maintains its own service and application experience." },
+  sitemap: { title: "Sitemap.", label: "SITEMAP", intro: "A human-readable directory of every page on the USAM Master website, grouped by area." },
 };

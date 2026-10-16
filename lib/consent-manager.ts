@@ -102,6 +102,61 @@ export function shouldShowBanner(): boolean {
   return readChoice() === null;
 }
 
+/**
+ * The complete, documented inventory of browser storage this website sets. This
+ * is the single source of truth the Cookie Settings UI reads, so what the user
+ * sees always matches what actually exists. All three are first-party, on the
+ * visitor's device, and necessary/functional — none is advertising or a
+ * third-party tracker.
+ */
+export const STORAGE_ITEMS = [
+  {
+    key: "usam-locale",
+    kind: "functional" as const,
+    purpose: { en: "Remembers your language choice (English/Arabic).", ar: "يتذكّر اختيارك للّغة (العربية/الإنجليزية)." },
+    storage: { en: "Local storage (this browser)", ar: "التخزين المحلي (هذا المتصفح)" },
+    duration: { en: "Until you clear it", ar: "حتى تقوم بمسحه" },
+  },
+  {
+    key: "usam-theme",
+    kind: "functional" as const,
+    purpose: { en: "Remembers your light/dark appearance choice.", ar: "يتذكّر اختيارك للمظهر الفاتح/الداكن." },
+    storage: { en: "Local storage (this browser)", ar: "التخزين المحلي (هذا المتصفح)" },
+    duration: { en: "Until you clear it", ar: "حتى تقوم بمسحه" },
+  },
+  {
+    key: "usam-consent",
+    kind: "necessary" as const,
+    purpose: { en: "Records your cookie choice so we can honor it.", ar: "يسجّل اختيارك لملفات الارتباط لنحترمه." },
+    storage: { en: "Local storage (this browser)", ar: "التخزين المحلي (هذا المتصفح)" },
+    duration: { en: "Until you reset preferences or clear it", ar: "حتى تعيد ضبط التفضيلات أو تمسحه" },
+  },
+] as const;
+
+/** The exact keys this site owns. Reset touches ONLY these — never other keys. */
+export const USAM_STORAGE_KEYS = STORAGE_ITEMS.map((i) => i.key);
+
+/**
+ * Reset ONLY the USAM preference keys documented above. This never calls
+ * localStorage.clear() — it removes a narrow, known allowlist so storage set by
+ * anything else is untouched. Returns the keys actually removed.
+ */
+export function resetSavedPreferences(): string[] {
+  if (typeof window === "undefined") return [];
+  const removed: string[] = [];
+  for (const key of USAM_STORAGE_KEYS) {
+    try {
+      if (window.localStorage.getItem(key) !== null) {
+        window.localStorage.removeItem(key);
+        removed.push(key);
+      }
+    } catch {
+      /* storage disabled; nothing to remove */
+    }
+  }
+  return removed;
+}
+
 function persist(choice: ConsentChoice) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));

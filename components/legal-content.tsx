@@ -21,7 +21,9 @@ import {
   type Locale,
   type PolicyType,
 } from "@/lib/legal/policies";
-import { CookieSettingsPanel } from "./cookie-consent";
+import { products, trustedDomain } from "@/data/products";
+import { parseInlineLinks } from "@/lib/legal/inline-links";
+import { CookieSettingsPanel, openCookieSettings } from "./cookie-consent";
 import { PrivacyRequestForm } from "./privacy-request-form";
 
 const ui = {
@@ -43,6 +45,15 @@ const ui = {
     backToCenter: "Back to the Legal Center",
     openSettings: "Open Cookie Settings",
     notEffective: "Not yet effective",
+    related: "Related policies",
+    status: "Status",
+    statusDraft: "Working draft (under review)",
+    statusPublished: "Published",
+    // Contextual actions per page.
+    actionPrivacyReq: "Make a privacy request",
+    actionContact: "Contact USAM",
+    actionCookies: "Open Cookie Settings",
+    actionPlatforms: "See the platform directory",
   },
   ar: {
     centerIntro:
@@ -62,8 +73,27 @@ const ui = {
     backToCenter: "العودة إلى المركز القانوني",
     openSettings: "فتح إعدادات ملفات الارتباط",
     notEffective: "لم يَسرِ بعد",
+    related: "سياسات ذات صلة",
+    status: "الحالة",
+    statusDraft: "مسودة عاملة (قيد المراجعة)",
+    statusPublished: "منشور",
+    actionPrivacyReq: "تقديم طلب خصوصية",
+    actionContact: "تواصل مع يوزم",
+    actionCookies: "فتح إعدادات ملفات الارتباط",
+    actionPlatforms: "عرض دليل المنصات",
   },
 } as const;
+
+/** Short related-policy set per page (keeps users moving between policies). */
+const RELATED: Record<PolicyType, PolicyType[]> = {
+  privacy: ["cookies", "ai-use", "privacy-requests"],
+  terms: ["privacy", "refunds", "payments"],
+  cookies: ["privacy", "ai-use"],
+  refunds: ["payments", "terms"],
+  payments: ["refunds", "terms"],
+  "ai-use": ["privacy", "terms"],
+  "privacy-requests": ["privacy", "cookies"],
+};
 
 type LocalPolicy = ReturnType<typeof localizedPolicy>;
 
@@ -77,6 +107,29 @@ function stripMarkers(text: string): string {
   if (/^\s*\[(FOR REVIEW|للمراجعة)[^\]]*\]\s*$/u.test(text)) return "";
   const neutral = /[\u0600-\u06FF]/.test(text) ? "(قيد الإعداد)" : "(being finalized)";
   return text.replace(/\[(FOR REVIEW|للمراجعة)[^\]]*\]/gu, neutral).replace(/\s{2,}/g, " ").trim();
+}
+
+/**
+ * Render a policy paragraph, turning any safe `[[label|target]]` reference
+ * tokens into real in-text links (to another policy/section) via React
+ * elements — never raw HTML. Plain text passes straight through.
+ */
+function Paragraph({ text }: { text: string }) {
+  const tokens = parseInlineLinks(text);
+  if (tokens.length === 1 && tokens[0].kind === "text") {
+    return <p>{tokens[0].text}</p>;
+  }
+  return (
+    <p>
+      {tokens.map((tok, i) =>
+        tok.kind === "link" ? (
+          <Link key={i} href={tok.href}>{tok.label}</Link>
+        ) : (
+          <span key={i}>{tok.text}</span>
+        ),
+      )}
+    </p>
+  );
 }
 
 type ShownSection = { id: string; heading: string; body: string[]; pending: boolean };
@@ -242,23 +295,29 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
     <article className="legal-doc" dir={locale === "ar" ? "rtl" : "ltr"}>
       <div className="legal-doc-head">
         <Badge published={isPublished} locale={locale} />
+        {/* Plain-language summary (the policy's scope sentence). */}
+        <p className="legal-summary">{doc.scope}</p>
         <dl className="legal-meta">
-          <div>
-            <dt>{t.scope}</dt>
-            <dd>{doc.scope}</dd>
-          </div>
           <div>
             <dt>{t.appliesTo}</dt>
             <dd>{doc.appliesTo}</dd>
           </div>
           <div>
-            <dt>{t.version}</dt>
-            <dd><bdi>{doc.version || "—"}</bdi></dd>
+            <dt>{t.status}</dt>
+            <dd>{isPublished ? t.statusPublished : t.statusDraft}</dd>
           </div>
-          <div>
-            <dt>{t.effective}</dt>
-            <dd>{doc.effectiveAt ?? t.notEffective}</dd>
-          </div>
+          {isPublished && (
+            <>
+              <div>
+                <dt>{t.version}</dt>
+                <dd><bdi>{doc.version}</bdi></dd>
+              </div>
+              <div>
+                <dt>{t.effective}</dt>
+                <dd><bdi>{doc.effectiveAt ?? t.notEffective}</bdi></dd>
+              </div>
+            </>
+          )}
           <div>
             <dt>{t.updated}</dt>
             <dd><bdi>{doc.updatedAt}</bdi></dd>
@@ -292,7 +351,7 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
                 {pending && <span className="legal-pending-tag">{locale === "ar" ? "قيد الإعداد" : "Being finalized"}</span>}
               </h2>
               {s.body.map((para, i) => (
-                <p key={i}>{para}</p>
+                <Paragraph key={i} text={para} />
               ))}
             </section>
           );
@@ -304,10 +363,129 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
           Cookie Settings; the Privacy Requests page embeds the request form. */}
       {type === "cookies" && <CookieSettingsPanel locale={locale} />}
       {type === "privacy-requests" && <PrivacyRequestForm locale={locale} />}
+      {type === "payments" && <PlatformDirectory locale={locale} />}
+
+      {/* A clear contextual action for the page. */}
+      <PolicyAction type={type} t={t} />
+
+      {/* Related policies keep users moving between documents. */}
+      <nav className="legal-related" aria-label={t.related}>
+        <span>{t.related}</span>
+        <div>
+          {(RELATED[type] ?? []).map((rt) => (
+            <Link key={rt} href={POLICIES[rt].path}>{localizedPolicy(POLICIES[rt], locale).title}</Link>
+          ))}
+        </div>
+      </nav>
 
       <p className="legal-back">
         <Link href="/legal">← {t.backToCenter}</Link>
       </p>
     </article>
+  );
+}
+
+/**
+ * Per-platform VERIFIED deep links. Each entry here was confirmed to resolve to
+ * a real, distinct page (HTTP 200 with its own content, not a SPA catch-all
+ * shell and not a 404) at build time — see docs/PLATFORM-LEGAL-LINKS.md for the
+ * probe evidence and date. We only list a sub-path we actually verified; we do
+ * NOT guess refund/privacy paths. Platforms whose sites are client-rendered
+ * single-page apps (every path returns the same shell) have no verifiable
+ * sub-paths, so for them we link the home only.
+ */
+const PLATFORM_VERIFIED_LINKS: Partial<
+  Record<ProductId, Array<{ path: string; en: string; ar: string }>>
+> = {
+  freelancing: [
+    { path: "/support", en: "Support", ar: "الدعم" },
+    { path: "/contact", en: "Contact", ar: "التواصل" },
+  ],
+};
+
+/**
+ * Platform directory. The primary link for every platform is its HOME (verified
+ * to resolve, HTTP 200), labelled "Open platform" — NOT described as a verified
+ * refund/support destination. Where we independently verified a platform's own
+ * support/contact page resolves to real content, we add it as a labelled deep
+ * link. `trustedDomain` keeps every href on an allowlisted hostname.
+ */
+function PlatformDirectory({ locale }: { locale: Locale }) {
+  const ar = locale === "ar";
+  return (
+    <section className="platform-directory" id="platform-directory" aria-labelledby="platform-directory-h">
+      <h2 id="platform-directory-h">{ar ? "دليل المنصات" : "Platform directory"}</h2>
+      <p>
+        {ar
+          ? "تتم المشتريات والاسترداد والدعم على المنصة نفسها. افتح المنصة التي اشتريت منها وابحث عن سياسة الاسترداد وقناة الدعم هناك."
+          : "Purchases, refunds and support happen on the platform itself. Open the platform you bought from and look for its refund policy and support channel there."}
+      </p>
+      <div className="platform-directory-grid">
+        {products.map((p) => {
+          const verified = PLATFORM_VERIFIED_LINKS[p.id] ?? [];
+          const host = new URL(p.domain).hostname;
+          return (
+            <div key={p.id} className="platform-directory-card">
+              <strong>{ar ? p.arabicName : p.name}</strong>
+              <span>{host}</span>
+              <a className="platform-directory-open" href={trustedDomain(p.domain)} target="_blank" rel="noreferrer">
+                {ar ? "افتح المنصة ↗" : "Open platform ↗"}
+              </a>
+              {verified.length > 0 && (
+                <span className="platform-directory-links">
+                  {verified.map((v) => (
+                    <a
+                      key={v.path}
+                      href={trustedDomain(p.domain + v.path)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {ar ? v.ar : v.en} ↗
+                    </a>
+                  ))}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="platform-directory-note">
+        {ar
+          ? "لم نُدرج رابط استرداد أو خصوصية مباشرًا لمنصةٍ ما لم نتحقق من وجود تلك الصفحة فعليًا. وإذا تعذّر الوصول إلى منصة، فتواصل مع يوزم عبر صفحة التواصل وسنرشدك إلى القناة الصحيحة."
+          : "We only list a platform's refund/privacy link once we have verified that page exists. If a platform is unavailable, contact USAM via the Contact page and we will point you to the right channel."}
+      </p>
+    </section>
+  );
+}
+
+/** The primary contextual action shown near the foot of each policy page. */
+function PolicyAction({ type, t }: { type: PolicyType; t: (typeof ui)[Locale] }) {
+  if (type === "privacy-requests") {
+    return (
+      <p className="legal-action">
+        <a className="primary-button" href="#privacy-request-form">{t.actionPrivacyReq}</a>
+      </p>
+    );
+  }
+  if (type === "cookies") {
+    return (
+      <p className="legal-action">
+        <button type="button" className="primary-button" onClick={() => openCookieSettings()}>{t.actionCookies}</button>
+      </p>
+    );
+  }
+  if (type === "refunds" || type === "payments") {
+    return (
+      <p className="legal-action">
+        <Link className="primary-button" href="/payments#platform-directory">{t.actionPlatforms}</Link>
+      </p>
+    );
+  }
+  // privacy / terms / ai-use → a route to raise a question.
+  return (
+    <p className="legal-action">
+      <Link className="primary-button" href="/privacy-requests">{t.actionPrivacyReq}</Link>
+      <Link className="quiet-button" href="/contact">{t.actionContact}</Link>
+    </p>
   );
 }
