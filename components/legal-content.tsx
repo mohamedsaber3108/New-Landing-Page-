@@ -390,9 +390,12 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
  * a real, distinct page (HTTP 200 with its own content, not a SPA catch-all
  * shell and not a 404) at build time — see docs/PLATFORM-LEGAL-LINKS.md for the
  * probe evidence and date. We only list a sub-path we actually verified; we do
- * NOT guess refund/privacy paths. Platforms whose sites are client-rendered
- * single-page apps (every path returns the same shell) have no verifiable
- * sub-paths, so for them we link the home only.
+ * NOT guess refund/privacy paths. For platforms whose sites are client-rendered
+ * single-page apps, the server returns the same shell for every path, so we
+ * cannot discover or verify their policy/support URLs from here — this is "not
+ * yet discovered/verified" (those pages likely exist inside the app), NOT
+ * "unavailable". For them we link the home only until their rendered navigation
+ * is inspected in a browser.
  */
 const PLATFORM_VERIFIED_LINKS: Partial<
   Record<ProductId, Array<{ path: string; en: string; ar: string }>>
@@ -451,8 +454,8 @@ function PlatformDirectory({ locale }: { locale: Locale }) {
       </div>
       <p className="platform-directory-note">
         {ar
-          ? "لم نُدرج رابط استرداد أو خصوصية مباشرًا لمنصةٍ ما لم نتحقق من وجود تلك الصفحة فعليًا. وإذا تعذّر الوصول إلى منصة، فتواصل مع يوزم عبر صفحة التواصل وسنرشدك إلى القناة الصحيحة."
-          : "We only list a platform's refund/privacy link once we have verified that page exists. If a platform is unavailable, contact USAM via the Contact page and we will point you to the right channel."}
+          ? "نُدرج رابطًا مباشرًا (مثل الدعم أو الاسترداد) فقط بعد التحقق من وجود تلك الصفحة فعليًا. وبعض المنصات تعرض صفحاتها داخل التطبيق بعد فتحه، فلم نتمكّن بعد من تحديد روابطها المباشرة والتحقق منها — افتح المنصة وابحث فيها عن سياسة الاسترداد وقناة الدعم. ولأي مساعدة، تواصل مع يوزم عبر صفحة التواصل."
+          : "We add a direct link (such as Support or Refunds) only after verifying that page exists. Some platforms render their pages inside the app after it opens, so we have not yet discovered and verified their direct links — open the platform and look for its refund policy and support channel there. For help, contact USAM via the Contact page."}
       </p>
     </section>
   );

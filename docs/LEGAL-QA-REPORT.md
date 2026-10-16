@@ -1,10 +1,20 @@
 # USAM legal subsystem — QA report (improvement pass 2)
 
 Date: 2026-10-16. Scope: the focused correction pass on the deployed legal
-subsystem (production baseline `ee321f5`). This report records **evidence** and
+subsystem, plus the follow-up that adds the legal-page print stylesheet and the
+corrected platform-directory wording. Production baseline for this report is
+`a4d2220` (the prior pass, already live). This report records **evidence** and
 is explicit about what is PASS (verified here), NOT VERIFIED (needs a browser),
 or DEFERRED (needs a business/legal input). HTTP 200 and unit tests alone are
-never reported as proof of UI behavior.
+never reported as proof of UI behavior, and no visual/interaction check is
+reported as passed without a browser test.
+
+> **Important scope note on the Arabic unit test.** `test/policy-ar-parity.test.ts`
+> proves only that the Arabic policy *data* exists and that the *selection path*
+> (`localizedPolicy(policy, "ar")`) returns complete, structurally-parallel
+> Arabic content. It does **NOT** prove the live language toggle, the RTL visual
+> layout, the Cookie Settings modal interaction, or the live preference-reset
+> behavior in a browser. Those remain NOT VERIFIED (see the checklist).
 
 ## Tooling available / not available (honest statement)
 
@@ -68,24 +78,24 @@ browser; manual step given). DEF = DEFERRED (needs a business/legal input).
 | 1 | All 8 legal routes render correct content/title | PASS | All 200; distinct titles; `/sitemap` added (200) |
 | 2 | Footer links from home + inner routes | PASS (HTTP) / NV (click) | Footer has all 8 legal + Cookie Settings + Your Privacy Choices + Sitemap; **click-through NV** |
 | 3 | Read without JS | NV | SSR HTML contains policy text + plain `<a>` links (nav uses real anchors); confirm in a JS-disabled browser |
-| 4 | EN/AR parity | PASS | `test/policy-ar-parity.test.ts`: every policy AR branch non-empty Arabic; identical section ids/order/paragraph counts EN↔AR |
+| 4 | EN/AR content parity (data) | PASS (data only) | `test/policy-ar-parity.test.ts`: every policy AR branch non-empty Arabic; identical section ids/order/paragraph counts EN↔AR. **Does NOT prove the live language toggle / RTL / modal / reset — those are NV (rows 5, 10, 11-live).** |
 | 5 | RTL/LTR correctness | NV | `dir`/`lang` set from locale; `<bdi>` wraps dates/emails; **visual RTL not verified** — check in browser |
 | 6 | 375 / 768 / desktop no overflow | NV | CSS uses responsive grids; **not measured** — check at each width |
 | 7 | 200% zoom usable | NV | Relative units used; **not measured** |
 | 8 | Light/dark readability | NV | Theme via CSS tokens; **dark mode not visually verified** |
 | 9 | Contents anchors land below sticky header | PASS (CSS) / NV (visual) | `scroll-margin-top:96px` on sections + platform directory |
 | 10 | Cookie modal open/close/Escape/focus-return/tab-trap/scroll-lock | NV | Code implements all five (focus trap, restore via `restoreFocusRef`, `body.overflow` lock, Escape, backdrop); **interaction not verified** — manual |
-| 11 | Preference reset: only intended keys; no unrelated loss | PASS | `test/consent-reset.test.ts`: removes only `usam-locale/theme/consent`; unrelated keys preserved; never `clear()`; reload reads defaults |
+| 11 | Preference reset: only intended keys; no unrelated loss | PASS (logic) / NV (live) | `test/consent-reset.test.ts`: removes only `usam-locale/theme/consent`; unrelated keys preserved; never `clear()`; returns removed keys; a missing key reads as default. **The live in-browser effect (UI updates + survives reload + effects don't rewrite old prefs) is NV** — manual check 2 |
 | 12 | Optional consent reject/withdraw/close≠accept | PASS (engine) | `test/consent-engine.test.ts`; no optional tech today so banner stays hidden by design |
 | 13 | No optional technologies → no fake banner | PASS | `shouldShowBanner()` false when `OPTIONAL_TECHS` empty |
 | 14 | Cookie dialog ↔ Ask USAM never trap focus behind each other | NV | Separate overlays; **concurrent-overlay focus not verified** — manual |
 | 15 | Request submission in staging: durable ref, dup/error handling | PASS (prior) | `test/privacy-requests.test.ts`, `test/idempotency.test.ts` (unchanged this pass) |
 | 16 | Staff access authorized / unauthorized denied / no client token | PASS (prior) | `test/admin-routes-auth.test.ts` (unchanged) |
 | 17 | Policy version lifecycle (draft stays draft) | PASS | `/api/v1/legal/requirements` → `published:false`; `test/public-policy-redaction.test.ts` |
-| 18 | Platform links: verified live, correct scope, no guessed paths | PASS | `docs/PLATFORM-LEGAL-LINKS.md`; homes 200 "Open platform"; only freelancing `/support`+`/contact` added (verified); edu/jobs/kids home-only (SPA shells) |
+| 18 | Platform links: verified live, correct scope, no guessed paths | PASS | `docs/PLATFORM-LEGAL-LINKS.md`; homes 200 "Open platform"; only freelancing `/support`+`/contact` added (verified). edu/jobs/kids are home-only because their policy/support URLs are **not yet discovered/verified** (client-rendered apps — not "unavailable"); pending browser nav inspection |
 | 19 | Refund claims: real support path, no unimplemented routing promise | PASS | Refunds `central-routing` states no automated hand-off; directs to platform |
 | 20 | Payment content: no-checkout scope, EGP clear, no unverified claims | PASS | Payments page: EGP base, estimate caveat, provider `[FOR REVIEW]`, no badges |
-| 21 | Print view includes scope/status/version | NV | No print stylesheet added this pass; **DEFERRED enhancement** (content is plain HTML so it prints, but scope/status print layout not styled) |
+| 21 | Print view includes scope/status/version | PASS (CSS present) / NV (rendering) | `@media print` block added in `app/globals.css`: hides nav/footer/cookie banner+modal/Ask USAM/ToC/action buttons/forms; keeps title, plain summary, scope/applies-to, **draft STATUS**, version (if published) and **last-updated** metadata, plus all section headings+body; prints link destinations. **Actual printed output (page breaks, paper legibility) NV** — manual check 7 |
 | 22 | Regression: homepage/nav/forms/Ask USAM unchanged | PASS (HTTP) / NV (interaction) | Home 200, nav + Ask USAM markup unchanged; footer-only + legal-only edits |
 
 ### In-text structured links (gap 4) — specific evidence
@@ -108,31 +118,45 @@ browser; manual step given). DEF = DEFERRED (needs a business/legal input).
 - HTTP: `/privacy` shows 2026-10-16, `/cookies` shows 2026-10-14, `/ai-use`
   shows 2026-10-15 — i.e. genuinely distinct per policy.
 
-## Manual browser checklist (the NOT VERIFIED rows)
+## Remaining browser checks (the NOT VERIFIED rows)
 
-Run on the deployed site in a real browser, EN and AR, light and dark:
+None of these are reported as passed. Run on the deployed site in a real
+browser, EN and AR, light and dark:
 
-1. Open Cookie Settings from the footer. Tab through: focus stays inside the
-   dialog and wraps; Escape closes it; focus returns to the Cookie Settings
-   button; background does not scroll while open.
-2. In Cookie Settings, set language to AR and theme to dark, then click
-   "Reset saved preferences". Confirm the message lists only the stored USAM
-   keys, any unrelated site storage is untouched, and after a reload the site
-   returns to default language/theme (keys gone).
-3. Switch language to العربية. Confirm every legal page renders Arabic headings,
-   bodies, metadata labels, and that layout is RTL with sane dates/emails.
-4. View each legal page at 375px, 768px, desktop, and at 200% zoom: no
-   horizontal overflow; all controls reachable.
-5. Click each in-text policy link (e.g. privacy → "Cookie Policy",
-   "International transfers") and confirm it navigates to the right page/anchor
-   below the sticky header.
-6. Open Ask USAM and Cookie Settings in turn; confirm neither traps focus behind
-   the other.
+1. **Modal.** Open Cookie Settings from the footer. Tab through: focus stays
+   inside the dialog and wraps; Escape closes it; focus returns to the Cookie
+   Settings button; background does not scroll while open. (rows 10, 14)
+2. **Live reset.** In Cookie Settings, set language to AR and theme to dark,
+   then click "Reset saved preferences". Confirm the message lists only the
+   stored USAM keys, unrelated site storage is untouched, and after a reload the
+   site returns to default language/theme (keys gone, not immediately rewritten).
+   (row 11-live)
+3. **Language toggle + RTL.** Use the real language switch to العربية. Confirm
+   every legal page renders Arabic headings, bodies, metadata labels, and that
+   layout is RTL with sane dates/emails. (rows 4-live, 5)
+4. **Responsive + zoom.** View each legal page at 375px, 768px, desktop, and at
+   200% zoom: no horizontal overflow; controls reachable. (rows 6, 7)
+5. **In-text links.** Click each in-text policy link (e.g. privacy → "Cookie
+   Policy", "International transfers") and confirm it navigates to the right
+   page/anchor below the sticky header. (row 2-click)
+6. **Overlays.** Open Ask USAM and Cookie Settings in turn; confirm neither
+   traps focus behind the other. (row 14)
+7. **Print.** Use the browser's Print preview on `/privacy` (EN and AR): confirm
+   the printout shows the title, summary, scope/applies-to, the **Draft** status,
+   the last-updated date, and all sections — and that the nav/footer/cookie
+   banner/Ask USAM/ToC/action buttons are omitted. (row 21-rendering)
+8. **Platform nav discovery.** Open `edu.usamif.com`, `jobs.usamif.com`,
+   `kids.usamif.com` and inspect the rendered navigation for privacy / terms /
+   refund / support links. Record any real URLs, add verified ones to
+   `PLATFORM_VERIFIED_LINKS`, and update `docs/PLATFORM-LEGAL-LINKS.md`. (row 18
+   follow-up — these are "not yet discovered/verified", not "unavailable")
 
 ## Deferred (needs an input, not an implementation)
 
-- Print stylesheet for policy pages (scope/status/version block). Content is
-  printable today; dedicated print layout is a follow-up.
-- Business/legal inputs tracked in `docs/USAM-legal-open-decisions` / the
-  handoff list (entity, address, privacy mailbox, lawful bases, retention,
-  governing law, international-transfer basis, per-platform policy URLs).
+- Business/legal inputs tracked in the handoff list (entity, address, privacy
+  mailbox, lawful bases, retention, governing law, international-transfer basis,
+  per-platform policy URLs). These block final publication only; the pages ship
+  as readable, clearly-labelled drafts.
+
+_The print stylesheet (previously listed here as deferred) is now implemented;
+its visual rendering is NOT VERIFIED and is in the browser checklist (check 7)._

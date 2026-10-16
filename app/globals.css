@@ -247,3 +247,97 @@
 .human-sitemap-grid a:hover{color:var(--accent);text-decoration:underline}
 .human-sitemap-grid a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
 .human-sitemap-note{font-size:.82rem;line-height:1.55;color:var(--ink-soft);margin:22px 0 0;max-width:72ch}
+
+/* ------------------------------------------------------------------ */
+/* Print stylesheet for legal pages (instruction §5: "Add print        */
+/* styles; printable content must include scope, status and revision").*/
+/* Goal: a clean, readable printout of the policy itself — the title,  */
+/* plain-language summary, scope/applies-to, draft/published STATUS,    */
+/* version (when published), the "last updated" revision date, and all  */
+/* section headings + body. Chrome (nav, footer, product grid, cookie   */
+/* banner/modal, Ask USAM, discovery strip, contextual action buttons   */
+/* and the table of contents) is hidden so the paper shows the policy,  */
+/* not the app shell. Applies to the policy page, the Legal Center and  */
+/* the human sitemap.                                                   */
+/* ------------------------------------------------------------------ */
+@media print {
+  /* Hide the app shell + all interactive/overlay chrome. */
+  .site-header,
+  .discovery-strip,
+  .site-footer,
+  .cookie-banner,
+  .cookie-modal-backdrop,
+  .ai-connector,
+  .skip-link,
+  .legal-toc,
+  .legal-action,
+  .legal-back,
+  .platform-directory-open,
+  .platform-directory-links,
+  .cookie-settings,
+  .lead-form {
+    display: none !important;
+  }
+
+  /* Reset the page to plain black-on-white for ink economy + legibility. */
+  html, body, .usam-app {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .page-experience, .page-details, .section-shell {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
+
+  /* The policy document itself. */
+  .legal-doc {
+    color: #000 !important;
+  }
+  .legal-doc-head { margin-bottom: 14pt !important; }
+
+  /* Keep the metadata block (scope/status/version/updated) visible and
+     readable in print — this is the required scope/status/revision info. */
+  .legal-meta {
+    border: 1px solid #999 !important;
+    background: #fff !important;
+    page-break-inside: avoid;
+  }
+  .legal-meta dt { color: #000 !important; }
+  .legal-meta dd { color: #000 !important; }
+  .legal-summary { color: #000 !important; }
+
+  /* The draft notice must print too, so a printed draft is never mistaken
+     for an approved document. */
+  .legal-draft-note {
+    border: 1px solid #000 !important;
+    background: #fff !important;
+    color: #000 !important;
+    page-break-inside: avoid;
+  }
+
+  /* Sections: readable body, avoid splitting a heading from its text. */
+  .legal-sections section { break-inside: auto; }
+  .legal-sections h2 {
+    color: #000 !important;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .legal-sections p { color: #000 !important; }
+  .legal-badge { border: 1px solid #000 !important; color: #000 !important; }
+  .legal-pending-tag { color: #000 !important; border-color: #000 !important; }
+
+  /* Show the destination of in-text policy links on paper. */
+  .legal-sections a[href^="/"]::after {
+    content: " (usamif.com" attr(href) ")";
+    font-size: 85%;
+    color: #333;
+  }
+
+  /* Legal Center + sitemap: print as plain lists. */
+  .legal-center, .human-sitemap { color: #000 !important; }
+  .legal-card { border: 1px solid #999 !important; background: #fff !important; break-inside: avoid; }
+
+  a { color: #000 !important; text-decoration: underline; }
+}
