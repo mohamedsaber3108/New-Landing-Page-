@@ -148,7 +148,7 @@ export const LEGAL_FRAMEWORKS = [
 
 // Keep a single global release version for the built-in baseline. Bumping this
 // (and the admin re-publishing) is what re-points consent evidence to a new
-// release. Date-based so it reads naturally in the UI.
+// release.
 export const BASELINE_VERSION = "2026-02-draft-1";
 
 // All built-in baselines ship as drafts: the text is provisional and must be
@@ -156,7 +156,40 @@ export const BASELINE_VERSION = "2026-02-draft-1";
 // publish an approved version that overrides this.
 const DRAFT: Approval = "draft";
 const noEffectiveDate = null;
-const BUILT_AT = "2026-02-01";
+
+// Honest, INDEPENDENT per-policy revision metadata.
+//
+// Each date below is the real date that policy's own content block was last
+// materially revised, established from this file's git history by tracking each
+// `const <policy>: Policy = { … }` block individually (git log -L on the block
+// range) — not a single file-level timestamp and not an auto-updating "today".
+// A shared constant would wrongly imply every policy changed whenever any one
+// did; these dates are each backed by a specific commit (or this change set).
+//
+// Provenance (verified via `git log -L '/^const <name>: Policy/,/^};/'`):
+//   27b728a  2026-10-14  all seven policies created.
+//   784a278  2026-10-15  privacy, terms, refunds, payments, ai-use,
+//                        privacy-requests — single-marker review tokens +
+//                        expanded processing inventory (privacy).
+//   cd669ac  2026-10-15  privacy — verified email-provider fact.
+//   561044f  2026-10-15  privacy, privacy-requests — tightened claims.
+//   ee321f5  2026-10-15  privacy — split lawful-basis into a pending section.
+//   (this change set) 2026-10-16  privacy — International transfers section;
+//                        refunds — corrected routing promise; payments —
+//                        user-facing security/price wording.
+//
+// When a policy's wording materially changes, bump ONLY that policy's entry to
+// the real date of the change. A published release additionally carries its own
+// effective date set by the admin workflow at publish time.
+const REVISIONS: Record<PolicyType, string> = {
+  privacy: "2026-10-16",
+  terms: "2026-10-15",
+  cookies: "2026-10-14",
+  refunds: "2026-10-16",
+  payments: "2026-10-16",
+  "ai-use": "2026-10-15",
+  "privacy-requests": "2026-10-15",
+};
 
 // ---------------------------------------------------------------------------
 // Policy documents (built-in baseline, DRAFT). English + Arabic are authored
@@ -168,7 +201,7 @@ const privacy: Policy = {
   path: "/privacy",
   version: BASELINE_VERSION,
   effectiveAt: noEffectiveDate,
-  updatedAt: BUILT_AT,
+  updatedAt: REVISIONS.privacy,
   approval: DRAFT,
   title: { en: "Privacy Policy", ar: "سياسة الخصوصية" },
   scope: {
@@ -212,7 +245,7 @@ const privacy: Policy = {
           "Guide signals: when you use the Ask USAM guide, we store only the resolved destination intent and language — never the words you typed.",
           "Preferences: your language and light/dark theme choices are stored in your browser (local storage), on your device, not on our servers.",
           "Operational records: your submissions are held in our database, and a queued internal notification record is created for each (containing a reference, not your message body). Our web server keeps standard access and error logs in the default format — including the visitor's IP address, date and time, the request line, response status, bytes sent, referrer and browser user-agent — rotated daily and retained for about 14 days before deletion. Whether the underlying cloud infrastructure also keeps automated snapshots or backups is [FOR REVIEW — automated backup coverage not yet confirmed; requires AWS-side verification].",
-          "We do not run advertising trackers or third-party analytics on this website. See the Cookie Policy for the full inventory.",
+          "We do not run advertising trackers or third-party analytics on this website. See the [[Cookie Policy|cookies]] for the full inventory.",
         ],
       },
       ar: {
@@ -225,7 +258,7 @@ const privacy: Policy = {
           "إشارات الدليل: عند استخدام دليل «اسأل يوزم»، نحفظ فقط الوجهة المقصودة واللغة — ولا نحفظ ما كتبته أبدًا.",
           "التفضيلات: تُحفظ لغتك واختيارك للوضع الفاتح/الداكن في متصفحك (التخزين المحلي) على جهازك، لا على خوادمنا.",
           "السجلات التشغيلية: تُحفظ طلباتك في قاعدة بياناتنا، ويُنشأ سجل إشعار داخلي في قائمة انتظار لكل منها (يحتوي على رقم مرجعي لا على نص رسالتك). ويحتفظ خادم الويب لدينا بسجلات وصول وأخطاء معتادة بالصيغة الافتراضية — تشمل عنوان IP للزائر والتاريخ والوقت وسطر الطلب وحالة الاستجابة وحجم البيانات والمُحيل ومتصفح المستخدم — تُدوَّر يوميًا وتُحفظ نحو 14 يومًا قبل حذفها. أما إن كانت البنية السحابية الأساسية تحتفظ أيضًا بلقطات أو نسخ احتياطية تلقائية فذلك [للمراجعة — تغطية النسخ الاحتياطي التلقائي غير مؤكدة بعد؛ تتطلب تحققًا من جهة AWS].",
-          "لا نشغّل أدوات تتبّع إعلانية ولا تحليلات من أطراف ثالثة على هذا الموقع. راجع سياسة ملفات الارتباط للاطّلاع على الجرد الكامل.",
+          "لا نشغّل أدوات تتبّع إعلانية ولا تحليلات من أطراف ثالثة على هذا الموقع. راجع [[سياسة ملفات الارتباط|cookies]] للاطّلاع على الجرد الكامل.",
         ],
       },
     },
@@ -268,7 +301,7 @@ const privacy: Policy = {
         heading: "Sharing, platforms and processors",
         body: [
           "When you continue to a platform (Education, Career, Freelancing, Kids), you leave this website and that platform's own terms and privacy notice apply. A choice you make here does not automatically authorize processing on another platform.",
-          "Verified processors used by this website: our cloud hosting provider processes the data on our instructions (the website and its database run on cloud infrastructure in Europe — see International transfers). We do not use third-party analytics or advertising processors on this site.",
+          "Verified processors used by this website: our cloud hosting provider processes the data on our instructions (the website and its database run on cloud infrastructure in Europe — see [[International transfers|privacy#international-transfers]]). We do not use third-party analytics or advertising processors on this site.",
           "Email sent to our domain is routed to Google (per our mail configuration), so Google processes inbound email on our behalf. The specific privacy mailbox and that it is actively monitored are [FOR REVIEW — confirm the privacy mailbox exists and is monitored]. Any further operational processors are [FOR REVIEW — confirm any additional processors]. The complete, maintained processor list is kept in our internal processor inventory.",
         ],
       },
@@ -276,8 +309,25 @@ const privacy: Policy = {
         heading: "المشاركة والمنصات والمعالِجون",
         body: [
           "عند الانتقال إلى منصة (التعليم أو المسار المهني أو العمل الحر أو الأطفال)، تغادر هذا الموقع وتسري شروط تلك المنصة وإشعار خصوصيتها. والاختيار الذي تتخذه هنا لا يُصرّح تلقائيًا بالمعالجة على منصة أخرى.",
-          "المعالِجون المؤكدون لهذا الموقع: يعالج مزوّد الاستضافة السحابية البيانات وفق تعليماتنا (يعمل الموقع وقاعدة بياناته على بنية سحابية في أوروبا — راجع النقل الدولي). ولا نستخدم معالِجي تحليلات أو إعلانات من أطراف ثالثة على هذا الموقع.",
+          "المعالِجون المؤكدون لهذا الموقع: يعالج مزوّد الاستضافة السحابية البيانات وفق تعليماتنا (يعمل الموقع وقاعدة بياناته على بنية سحابية في أوروبا — راجع [[النقل الدولي|privacy#international-transfers]]). ولا نستخدم معالِجي تحليلات أو إعلانات من أطراف ثالثة على هذا الموقع.",
           "يُوجَّه البريد المُرسَل إلى نطاقنا إلى Google (وفق إعداد البريد لدينا)، لذا يعالج Google البريد الوارد نيابةً عنّا. أما صندوق بريد الخصوصية المحدد وكونه مُراقَبًا فعليًا فذلك [للمراجعة — تأكيد وجود صندوق بريد الخصوصية ومراقبته]. وأي معالِجين تشغيليين إضافيين [للمراجعة — تأكيد أي معالِجين إضافيين]. وتُحفظ قائمة المعالِجين الكاملة والمحدّثة في جرد المعالِجين الداخلي.",
+        ],
+      },
+    },
+    {
+      id: "international-transfers",
+      en: {
+        heading: "International transfers",
+        body: [
+          "Where your data is hosted (verified fact): this website and its database run on cloud infrastructure located in Europe (an AWS data-centre region in Stockholm, Sweden). So if you use the site from Egypt, Saudi Arabia, or elsewhere, your enquiry data is processed on servers in the EU.",
+          "The legal basis and safeguard for that cross-border transfer under the applicable Egyptian and Saudi frameworks is [FOR REVIEW — international-transfer basis, to be confirmed by counsel]. We keep the hosting location (a verified fact) separate from the transfer basis (a legal determination still being confirmed) so neither is overstated.",
+        ],
+      },
+      ar: {
+        heading: "النقل الدولي للبيانات",
+        body: [
+          "مكان استضافة بياناتك (حقيقة مؤكدة): يعمل هذا الموقع وقاعدة بياناته على بنية سحابية في أوروبا (منطقة مركز بيانات لـ AWS في ستوكهولم بالسويد). لذا إذا استخدمت الموقع من مصر أو السعودية أو غيرهما، تُعالَج بيانات استفسارك على خوادم في الاتحاد الأوروبي.",
+          "أما الأساس القانوني والضمان لهذا النقل عبر الحدود بموجب الأطر المصرية والسعودية فذلك [للمراجعة — أساس النقل الدولي، يؤكده المستشار القانوني]. ونفصل مكان الاستضافة (حقيقة مؤكدة) عن أساس النقل (تحديد قانوني ما زال قيد التأكيد) حتى لا نبالغ في أيٍّ منهما.",
         ],
       },
     },
@@ -287,14 +337,14 @@ const privacy: Policy = {
         heading: "Keeping data and your rights",
         body: [
           "We keep each type of record only as long as needed for its purpose and a reasonable follow-up period. We will not state a specific retention period as a promise until a process that enforces it is in place; a documented, authorized and tested deletion procedure is not yet in place.",
-          "You may ask to access, correct or delete your data, or withdraw an optional consent, through the Privacy Requests page. Submitting a request gives you a receipt reference confirming we received it — receipt is not fulfilment. Each request is reviewed by our team, and we verify your identity before any disclosure, change or deletion; we never act on an email address alone. The end-to-end fulfilment procedure and response timeframes are still being finalized.",
+          "You may ask to access, correct or delete your data, or withdraw an optional consent, through the [[Privacy Requests|privacy-requests]] page. Submitting a request gives you a receipt reference confirming we received it — receipt is not fulfilment. Each request is reviewed by our team, and we verify your identity before any disclosure, change or deletion; we never act on an email address alone. The end-to-end fulfilment procedure and response timeframes are still being finalized.",
         ],
       },
       ar: {
         heading: "حفظ البيانات وحقوقك",
         body: [
           "نحتفظ بكل نوع من السجلات فقط للمدة اللازمة لغرضه ولفترة متابعة معقولة. ولن نذكر مدة احتفاظ محددة كوعد قبل وجود عملية تنفّذها؛ ولا يوجد بعد إجراء حذف موثّق ومُصرّح به ومُختبَر.",
-          "ويمكنك طلب الاطّلاع على بياناتك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية، عبر صفحة طلبات الخصوصية. ويمنحك تقديم الطلب رقمًا مرجعيًا يؤكد استلامنا له — والاستلام ليس تنفيذًا. ويراجع فريقنا كل طلب، ونتحقق من هويتك قبل أي إفصاح أو تغيير أو حذف؛ ولا نتصرّف بالاعتماد على البريد الإلكتروني وحده. وما زال إجراء التنفيذ الكامل والمدد الزمنية قيد الإعداد.",
+          "ويمكنك طلب الاطّلاع على بياناتك أو تصحيحها أو حذفها، أو سحب موافقة اختيارية، عبر [[صفحة طلبات الخصوصية|privacy-requests]]. ويمنحك تقديم الطلب رقمًا مرجعيًا يؤكد استلامنا له — والاستلام ليس تنفيذًا. ويراجع فريقنا كل طلب، ونتحقق من هويتك قبل أي إفصاح أو تغيير أو حذف؛ ولا نتصرّف بالاعتماد على البريد الإلكتروني وحده. وما زال إجراء التنفيذ الكامل والمدد الزمنية قيد الإعداد.",
         ],
       },
     },
@@ -335,14 +385,14 @@ const privacy: Policy = {
         heading: "Changes and contact",
         body: [
           "We keep previous versions of this policy and record its version with your acknowledgement. If we make a material change we will show it appropriately rather than forcing acceptance on every visit.",
-          `Privacy contact: the USAM Privacy Team at ${RESPONSIBLE_CONTACT.privacyEmail}. You can also submit a request through the Privacy Requests page.`,
+          `Privacy contact: the USAM Privacy Team at ${RESPONSIBLE_CONTACT.privacyEmail}. You can also submit a request through the [[Privacy Requests|privacy-requests]] page.`,
         ],
       },
       ar: {
         heading: "التغييرات والتواصل",
         body: [
           "نحتفظ بالإصدارات السابقة من هذه السياسة ونسجّل إصدارها مع إقرارك. وإذا أجرينا تغييرًا جوهريًا فسنعرضه بشكل مناسب بدلًا من فرض القبول في كل زيارة.",
-          `جهة التواصل للخصوصية: فريق خصوصية يوزم عبر ${RESPONSIBLE_CONTACT.privacyEmail}. ويمكنك أيضًا إرسال طلب عبر صفحة طلبات الخصوصية.`,
+          `جهة التواصل للخصوصية: فريق خصوصية يوزم عبر ${RESPONSIBLE_CONTACT.privacyEmail}. ويمكنك أيضًا إرسال طلب عبر [[صفحة طلبات الخصوصية|privacy-requests]].`,
         ],
       },
     },
@@ -354,7 +404,7 @@ const terms: Policy = {
   path: "/terms",
   version: BASELINE_VERSION,
   effectiveAt: noEffectiveDate,
-  updatedAt: BUILT_AT,
+  updatedAt: REVISIONS.terms,
   approval: DRAFT,
   title: { en: "Terms of Use", ar: "شروط الاستخدام" },
   scope: {
@@ -407,14 +457,14 @@ const terms: Policy = {
         heading: "Enquiries and responses",
         body: [
           "Submitting an enquiry does not create a contract or guarantee a specific outcome, price or timeline. We store your enquiry to respond and route it to the right team.",
-          "Any pricing shown for a platform offer is indicative and is confirmed on the selling platform before any payment. See the Payment Security and Currency page.",
+          "Any pricing shown for a platform offer is indicative and is confirmed on the selling platform before any payment. See the [[Payment Security & Currency|payments]] page.",
         ],
       },
       ar: {
         heading: "الاستفسارات والردود",
         body: [
           "إرسال استفسار لا يُنشئ عقدًا ولا يضمن نتيجة أو سعرًا أو إطارًا زمنيًا محددًا. ونحفظ استفسارك للرد عليه وتوجيهه إلى الفريق المناسب.",
-          "وأي سعر يُعرض لعرض منصة هو استرشادي ويُؤكَّد على المنصة البائعة قبل أي دفع. راجع صفحة أمان الدفع والعملة.",
+          "وأي سعر يُعرض لعرض منصة هو استرشادي ويُؤكَّد على المنصة البائعة قبل أي دفع. راجع [[صفحة أمان الدفع والعملة|payments]].",
         ],
       },
     },
@@ -458,7 +508,7 @@ const cookies: Policy = {
   path: "/cookies",
   version: BASELINE_VERSION,
   effectiveAt: noEffectiveDate,
-  updatedAt: BUILT_AT,
+  updatedAt: REVISIONS.cookies,
   approval: DRAFT,
   title: { en: "Cookie Policy", ar: "سياسة ملفات الارتباط" },
   scope: {
@@ -547,7 +597,7 @@ const refunds: Policy = {
   path: "/refunds",
   version: BASELINE_VERSION,
   effectiveAt: noEffectiveDate,
-  updatedAt: BUILT_AT,
+  updatedAt: REVISIONS.refunds,
   approval: DRAFT,
   title: { en: "Refund & Cancellation Policy", ar: "سياسة الاسترداد والإلغاء" },
   scope: {
@@ -600,14 +650,14 @@ const refunds: Policy = {
         heading: "How to make a request",
         body: [
           "Start on the platform where you paid and use its refund/cancellation channel. Have your order or transaction reference ready — the platform needs it to locate your payment.",
-          "A typical flow is: submit the request with the order reference, the platform reviews eligibility against its policy, and if approved the refund is returned to the original payment method. Timeframes are set by the platform and its payment provider.",
+          "A typical flow is: submit the request with the order reference, the platform reviews eligibility against its policy, and if approved the refund is returned to the original payment method. Timeframes are set by the platform and its payment provider — see [[Payment Security & Currency|payments]] for how and where payment happens.",
         ],
       },
       ar: {
         heading: "كيف تقدّم طلبًا",
         body: [
           "ابدأ من المنصة التي دفعت فيها واستخدم قناة الاسترداد/الإلغاء بها. وجهّز رقم طلبك أو معاملتك — تحتاجه المنصة لتحديد موقع دفعتك.",
-          "والمسار المعتاد: تقديم الطلب مع رقم الطلب، ثم تراجع المنصة الأهلية وفق سياستها، وإذا تمت الموافقة يُعاد الاسترداد إلى وسيلة الدفع الأصلية. وتحدّد المنصة ومزوّد الدفع المدد الزمنية.",
+          "والمسار المعتاد: تقديم الطلب مع رقم الطلب، ثم تراجع المنصة الأهلية وفق سياستها، وإذا تمت الموافقة يُعاد الاسترداد إلى وسيلة الدفع الأصلية. وتحدّد المنصة ومزوّد الدفع المدد الزمنية — راجع [[أمان الدفع والعملة|payments]] لمعرفة كيف وأين يتم الدفع.",
         ],
       },
     },
@@ -616,13 +666,15 @@ const refunds: Policy = {
       en: {
         heading: "If you contact us here",
         body: [
-          "If you send a refund-related enquiry through this website, we will route it to the responsible platform and give you a reference for the enquiry. That reference confirms we received your message — it is not an approval, and it does not complete or confirm any payment or refund. Only the platform can approve a refund.",
+          "The fastest way to get a refund is to go straight to the platform where you paid — it holds your order and is the only party that can approve a refund. The Master website cannot approve, process, or escalate a refund.",
+          "If you do send a refund-related message through this website, it is stored securely and you receive a reference number. That reference only confirms we received your message — it is not approval, and it is not confirmation that your request has been escalated or actioned. We do not currently operate an automated hand-off that forwards your message to a platform, so please also contact the platform directly.",
         ],
       },
       ar: {
         heading: "إذا تواصلت معنا هنا",
         body: [
-          "إذا أرسلت استفسارًا متعلقًا بالاسترداد عبر هذا الموقع، فسنوجّهه إلى المنصة المسؤولة ونمنحك رقمًا مرجعيًا للاستفسار. وهذا الرقم يؤكد استلامنا رسالتك فقط — وليس موافقة، ولا يُكمل أو يؤكد أي دفع أو استرداد. والمنصة وحدها هي من يوافق على الاسترداد.",
+          "أسرع طريقة للحصول على استرداد هي التوجّه مباشرةً إلى المنصة التي دفعت فيها — فهي التي تحتفظ بطلبك وهي الجهة الوحيدة التي يمكنها الموافقة على الاسترداد. ولا يمكن للموقع الرئيسي الموافقة على استرداد أو معالجته أو تصعيده.",
+          "وإذا أرسلت رسالة متعلقة بالاسترداد عبر هذا الموقع، فإنها تُحفظ بأمان وتحصل على رقم مرجعي. وهذا الرقم يؤكد استلامنا لرسالتك فقط — وليس موافقة، وليس تأكيدًا بأن طلبك قد صُعِّد أو نُفِّذ. ولا نشغّل حاليًا تحويلًا تلقائيًا يمرّر رسالتك إلى منصة، لذا يرجى أيضًا التواصل مع المنصة مباشرةً.",
         ],
       },
     },
@@ -634,7 +686,7 @@ const payments: Policy = {
   path: "/payments",
   version: BASELINE_VERSION,
   effectiveAt: noEffectiveDate,
-  updatedAt: BUILT_AT,
+  updatedAt: REVISIONS.payments,
   approval: DRAFT,
   title: { en: "Payment Security & Currency", ar: "أمان الدفع والعملة" },
   scope: {
@@ -653,14 +705,14 @@ const payments: Policy = {
         heading: "Payment happens on the platform",
         body: [
           "This website does not have a cart, checkout, card form, or wallet. When an offer involves payment, it is completed on the relevant platform using that platform's configured payment provider.",
-          "We do not ask for, receive, or store card numbers, CVV, or bank credentials on usamif.com. Never type payment details into an enquiry form.",
+          "We do not ask for, receive, or store card numbers, CVV, or bank credentials on usamif.com. Never type payment details into an enquiry form. For returns, see [[Refunds & Cancellations|refunds]].",
         ],
       },
       ar: {
         heading: "الدفع يتم على المنصة",
         body: [
           "لا يحتوي هذا الموقع على سلة أو صفحة دفع أو نموذج بطاقة أو محفظة. وعندما يتضمّن العرض دفعًا، يُستكمل على المنصة المعنية عبر مزوّد الدفع المُهيّأ لتلك المنصة.",
-          "ولا نطلب أرقام البطاقات أو رمز التحقق أو بيانات البنك ولا نستلمها ولا نخزّنها على usamif.com. ولا تُدخل بيانات الدفع في نموذج استفسار أبدًا.",
+          "ولا نطلب أرقام البطاقات أو رمز التحقق أو بيانات البنك ولا نستلمها ولا نخزّنها على usamif.com. ولا تُدخل بيانات الدفع في نموذج استفسار أبدًا. وللاسترداد، راجع [[الاسترداد والإلغاء|refunds]].",
         ],
       },
     },
@@ -670,14 +722,14 @@ const payments: Policy = {
         heading: "Security on the selling platform",
         body: [
           "On a selling platform, payment is handled through the provider's hosted checkout or tokenized fields where supported, so card data is handled by the payment provider rather than kept in USAM application logs or support tools.",
-          "We do not claim to be \"PCI certified\" or \"100% secure\", and we do not advertise bank partnerships, card-network logos, or 3-D Secure here. Using a hosted payment provider does not by itself establish USAM's own compliance. Any such claim will be published only with evidence and permission, after review. The provider's identity and capabilities are [FOR REVIEW — payment provider, platform-side] on the selling platform.",
+          "What to expect: on the Master website you will never be asked for card details, so there is nothing to secure here. When you pay on a platform, the specific security measures and certifications are described by that platform and its payment provider. We only state security facts we can evidence; we do not display certification badges, bank-partnership claims, or card-network logos on this site. The platform's payment provider and its capabilities are [FOR REVIEW — payment provider, platform-side].",
         ],
       },
       ar: {
         heading: "الأمان على المنصة البائعة",
         body: [
           "على المنصة البائعة، يُعالَج الدفع عبر صفحة الدفع المُستضافة لدى المزوّد أو الحقول المُرمَّزة حيثما يُتاح، بحيث يتولّى مزوّد الدفع بيانات البطاقة بدلًا من حفظها في سجلات تطبيقات يوزم أو أدوات الدعم.",
-          "ولا ندّعي أننا «حاصلون على شهادة PCI» أو «آمنون 100%»، ولا نعلن عن شراكات بنكية أو شعارات شبكات بطاقات أو 3-D Secure هنا. واستخدام مزوّد دفع مُستضاف لا يُثبت بحد ذاته امتثال يوزم. وأي ادّعاء كهذا لن يُنشر إلا بدليل وإذن وبعد مراجعة. وهوية المزوّد وقدراته [تتطلب تهيئة] على المنصة البائعة.",
+          "ما يمكنك توقّعه: لن يُطلب منك على الموقع الرئيسي أي بيانات بطاقة، لذا لا شيء لتأمينه هنا. وعند الدفع على منصة، تصف تلك المنصة ومزوّد الدفع لديها إجراءات الأمان والشهادات. ونحن لا نذكر إلا حقائق أمان يمكننا إثباتها؛ ولا نعرض شارات شهادات أو ادّعاءات شراكة بنكية أو شعارات شبكات بطاقات على هذا الموقع. ومزوّد الدفع لدى المنصة وقدراته [للمراجعة — مزوّد الدفع، على مستوى المنصة].",
         ],
       },
     },
@@ -687,7 +739,7 @@ const payments: Policy = {
         heading: "Currency and prices",
         body: [
           `The base currency for USAM-owned pricing is the Egyptian Pound (${BASE_CURRENCY}).`,
-          "This website does not invent prices. Where a price for a platform offer is shown, it identifies the destination offering and its currency. If a figure in another currency is shown, it is labelled as an estimate (with the exchange-rate source and timestamp) and is not the final charge.",
+          "Any price you see for a platform offer reflects that platform's own pricing, and it is shown with the offering it belongs to and its currency. If a figure appears in another currency, it is only an indicative estimate (shown with the exchange-rate source and time) — not the amount you will actually be charged.",
           "The final charge currency, amount, taxes and fees are shown on the selling platform before you pay. Your card issuer may apply its own currency-conversion charge; that is between you and your issuer.",
         ],
       },
@@ -695,7 +747,7 @@ const payments: Policy = {
         heading: "العملة والأسعار",
         body: [
           "العملة الأساسية لتسعير يوزم هي الجنيه المصري (EGP).",
-          "ولا يخترع هذا الموقع أسعارًا. وحيثما يُعرض سعر لعرض منصة، يوضّح العرض الوجهة وعملته. وإذا عُرض مبلغ بعملة أخرى، فيوسَم كتقدير (مع مصدر سعر الصرف ووقته) وليس المبلغ النهائي.",
+          "أي سعر تراه لعرض منصة يعكس تسعير تلك المنصة نفسها، ويُعرض مع العرض الذي يخصّه وعملته. وإذا ظهر مبلغ بعملة أخرى، فهو تقدير استرشادي فقط (يُعرض مع مصدر سعر الصرف ووقته) — وليس المبلغ الذي ستُخصَم به فعليًا.",
           "وتُعرض عملة الخصم النهائية ومبلغه والضرائب والرسوم على المنصة البائعة قبل الدفع. وقد يطبّق مُصدِر بطاقتك رسوم تحويل عملة خاصة به؛ وذلك بينك وبين المُصدِر.",
         ],
       },
@@ -723,7 +775,7 @@ const aiUse: Policy = {
   path: "/ai-use",
   version: BASELINE_VERSION,
   effectiveAt: noEffectiveDate,
-  updatedAt: BUILT_AT,
+  updatedAt: REVISIONS["ai-use"],
   approval: DRAFT,
   title: { en: "AI & Data Use", ar: "الذكاء الاصطناعي واستخدام البيانات" },
   scope: {
@@ -759,14 +811,14 @@ const aiUse: Policy = {
         heading: "No high-impact automated decisions here",
         body: [
           "The guide only suggests a starting point. It does not make account, payment, hiring, or eligibility decisions, and it does not profile you. Treat its suggestion as a starting point and use your own judgment.",
-          "If a signal is stored to understand where visitors want to go, it records only the resolved product intent and language — never your raw message.",
+          "If a signal is stored to understand where visitors want to go, it records only the resolved product intent and language — never your raw message. See the [[Privacy Policy|privacy]] for how information is handled.",
         ],
       },
       ar: {
         heading: "لا قرارات آلية عالية الأثر هنا",
         body: [
           "يقترح الدليل نقطة بداية فقط. ولا يتخذ قرارات تتعلق بالحساب أو الدفع أو التوظيف أو الأهلية، ولا يصنّفك. فاعتبر اقتراحه نقطة انطلاق واستخدم تقديرك.",
-          "وإذا خُزّنت إشارة لفهم وجهة الزوّار، فإنها تسجّل القصد تجاه المنتج واللغة فقط — ولا تسجّل رسالتك الأصلية أبدًا.",
+          "وإذا خُزّنت إشارة لفهم وجهة الزوّار، فإنها تسجّل القصد تجاه المنتج واللغة فقط — ولا تسجّل رسالتك الأصلية أبدًا. راجع [[سياسة الخصوصية|privacy]] لمعرفة كيفية التعامل مع المعلومات.",
         ],
       },
     },
@@ -793,7 +845,7 @@ const privacyRequests: Policy = {
   path: "/privacy-requests",
   version: BASELINE_VERSION,
   effectiveAt: noEffectiveDate,
-  updatedAt: BUILT_AT,
+  updatedAt: REVISIONS["privacy-requests"],
   approval: DRAFT,
   title: { en: "Privacy Requests & Contact", ar: "طلبات الخصوصية والتواصل" },
   scope: {
@@ -812,6 +864,7 @@ const privacyRequests: Policy = {
         heading: "What you can ask for",
         body: [
           "Subject to the applicable law, you can ask us to: confirm what enquiry data we hold about you and access it, correct it, delete it, or withdraw an optional consent (such as marketing). You can also ask a general privacy question.",
+          "For browser preferences (language, theme, and your cookie choice), use Cookie Settings on the [[Cookie Policy|cookies]] page — you can review exactly what is stored and reset it there without making a request.",
           "Which rights apply, and any legal exceptions (for example records we must keep), depend on the applicable Egyptian or Saudi framework and are [FOR REVIEW — applicable rights and exceptions, to be confirmed by counsel]. We will tell you how a specific request was handled.",
         ],
       },
@@ -819,6 +872,7 @@ const privacyRequests: Policy = {
         heading: "ما يمكنك طلبه",
         body: [
           "وفقًا للقانون المعمول به، يمكنك أن تطلب منّا: تأكيد بيانات الاستفسار التي نحتفظ بها عنك والاطّلاع عليها، أو تصحيحها، أو حذفها، أو سحب موافقة اختيارية (مثل التسويق). ويمكنك أيضًا طرح سؤال عام عن الخصوصية.",
+          "ولتفضيلات المتصفح (اللغة والمظهر واختيار ملفات الارتباط)، استخدم «إعدادات ملفات الارتباط» في صفحة [[سياسة ملفات الارتباط|cookies]] — حيث يمكنك مراجعة ما هو مخزَّن بدقّة وإعادة ضبطه دون تقديم طلب.",
           "والحقوق المنطبقة وأي استثناءات قانونية (مثل سجلات يلزمنا الاحتفاظ بها) تعتمد على الإطار المصري أو السعودي المعمول به و[تتطلب مراجعة قانونية]. وسنخبرك بكيفية معالجة طلب معيّن.",
         ],
       },

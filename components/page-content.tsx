@@ -81,6 +81,96 @@ const labels: Record<string,string> = {about:"عن يوزم",ecosystem:"المن
 export function SiteDirectory({locale}:{locale:Locale}) {
  return <nav className="site-directory section-shell" aria-label={locale==="ar"?"جميع الصفحات":"All pages"}><h2>{locale==="ar"?"جميع صفحات يوزم":"Explore all of USAM"}</h2><div>{Object.entries(routes).map(([slug,page])=><Link key={slug} href={"/"+slug}>{locale==="ar"?labels[slug]:page.label.replace("FOR ","")}</Link>)}</div></nav>;
 }
+/**
+ * Human-readable sitemap (instruction §4/§15 + screenshot "Sitemap"): a grouped
+ * directory of every internal page, distinct from the machine sitemap.xml at
+ * /sitemap.xml. Links use the plain-anchor Link so they work without JS.
+ */
+function HumanSitemap({ locale }: { locale: Locale }) {
+  const ar = locale === "ar";
+  const groups: Array<{ title: [string, string]; links: Array<[string, string, string]> }> = [
+    {
+      title: ["Discover", "اكتشف"],
+      links: [
+        ["/", "Home", "الرئيسية"],
+        ["/explore", "Explore by goal", "استكشف حسب الهدف"],
+        ["/ecosystem", "The ecosystem", "المنظومة"],
+        ["/how-it-works", "How it works", "كيف تعمل يوزم"],
+        ["/guide", "USAM Guide", "دليل يوزم"],
+      ],
+    },
+    {
+      title: ["For you", "لك"],
+      links: [
+        ["/for-individuals", "For individuals", "للأفراد"],
+        ["/for-enterprises", "For enterprises", "للمؤسسات"],
+        ["/government", "For government", "للجهات الحكومية"],
+        ["/for-talent", "For talent", "للمواهب"],
+        ["/kids", "Kids & Parents", "الأطفال وأولياء الأمور"],
+      ],
+    },
+    {
+      title: ["About USAM", "عن يوزم"],
+      links: [
+        ["/about", "About", "عن يوزم"],
+        ["/trust", "Trust & Safety", "الثقة والأمان"],
+        ["/faq", "FAQ", "الأسئلة الشائعة"],
+        ["/pricing", "Pricing", "الأسعار"],
+        ["/status", "Status", "حالة الخدمات"],
+        ["/contact", "Contact USAM", "تواصل مع يوزم"],
+      ],
+    },
+    {
+      title: ["Legal & Privacy", "القانون والخصوصية"],
+      links: [
+        ["/legal", "Legal Center", "المركز القانوني"],
+        ["/privacy", "Privacy Policy", "سياسة الخصوصية"],
+        ["/terms", "Terms of Use", "شروط الاستخدام"],
+        ["/cookies", "Cookie Policy", "سياسة ملفات الارتباط"],
+        ["/refunds", "Refunds & Cancellations", "الاسترداد والإلغاء"],
+        ["/payments", "Payment Security & Currency", "أمان الدفع والعملة"],
+        ["/ai-use", "AI & Data Use", "الذكاء الاصطناعي واستخدام البيانات"],
+        ["/privacy-requests", "Privacy Requests & Choices", "طلبات الخصوصية والاختيارات"],
+      ],
+    },
+  ];
+  return (
+    <nav className="human-sitemap" aria-label={ar ? "خريطة الموقع" : "Sitemap"}>
+      <div className="human-sitemap-grid">
+        {groups.map((g) => (
+          <section key={g.title[0]}>
+            <h2>{ar ? g.title[1] : g.title[0]}</h2>
+            <ul>
+              {g.links.map(([href, en, arLabel]) => (
+                <li key={href}>
+                  <Link href={href}>{ar ? arLabel : en}</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+        <section>
+          <h2>{ar ? "المنصات" : "Platforms"}</h2>
+          <ul>
+            {products.map((p) => (
+              <li key={p.id}>
+                <a href={p.domain} target="_blank" rel="noreferrer">
+                  {ar ? p.arabicName : p.name} ↗
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+      <p className="human-sitemap-note">
+        {ar
+          ? "تُدار صفحات كل منصة داخل المنصة نفسها. أما نسخة محركات البحث فمتاحة على /sitemap.xml."
+          : "Each platform's own pages live inside that platform. A machine-readable version is at /sitemap.xml."}
+      </p>
+    </nav>
+  );
+}
+
 export function PageContent({slug,locale,onGuide}:{slug:string;locale:Locale;onGuide:()=>void}) {
  const ar=locale==="ar"; const [query,setQuery]=useState("");
  // Legal Center + policy pages render their own structured content (ToC,
@@ -88,6 +178,7 @@ export function PageContent({slug,locale,onGuide}:{slug:string;locale:Locale;onG
  // NOT show the product grid or guide CTA.
  if (slug==="legal") return <div className="page-details"><LegalCenter locale={locale}/></div>;
  if (LEGAL_SLUGS.has(slug)) return <div className="page-details"><LegalPolicy type={slug as PolicyType} locale={locale}/></div>;
+ if (slug==="sitemap") return <div className="page-details"><HumanSitemap locale={locale}/></div>;
  const focused=products.filter(p=>slug==="kids"?p.id==="kids":slug==="for-talent"?["career","freelancing"].includes(p.id):true);
  const matches=focused.filter(p=>(ar?p.arabicName+" "+p.arabicFeatures.join(" "):p.name+" "+p.features.join(" ")).toLowerCase().includes(query.toLowerCase()));
  return <div className="page-details">

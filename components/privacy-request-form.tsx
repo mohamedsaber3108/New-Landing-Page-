@@ -12,6 +12,7 @@
 
 import { useRef, useState } from "react";
 import { PRIVACY_REQUEST_TYPES } from "@/db/schema";
+import Link from "./nav-link";
 
 type Locale = "en" | "ar";
 
@@ -35,6 +36,9 @@ const t = {
     messageHint: "Describe your request. Do not include passwords or payment details.",
     submit: "Submit request",
     submitting: "Submitting…",
+    noticePre: "The details you enter are handled as described in our",
+    privacyLink: "Privacy Policy",
+    noticePost: ".",
     successTitle: "Request received",
     successBody: "Keep this reference. It confirms receipt — it is not approval, and no data has been disclosed or deleted yet.",
     verifyNote: "Next: a staff member will contact you to verify your identity before any action.",
@@ -62,6 +66,9 @@ const t = {
     messageHint: "صف طلبك. ولا تُدرج كلمات المرور أو بيانات الدفع.",
     submit: "إرسال الطلب",
     submitting: "جارٍ الإرسال…",
+    noticePre: "تُعالَج البيانات التي تُدخلها وفق ما هو موضّح في",
+    privacyLink: "سياسة الخصوصية",
+    noticePost: ".",
     successTitle: "تم استلام الطلب",
     successBody: "احتفظ بهذا الرقم. فهو يؤكد الاستلام — وليس موافقة، ولم يُفصح عن أي بيانات أو تُحذف بعد.",
     verifyNote: "التالي: سيتواصل معك موظف للتحقق من هويتك قبل أي إجراء.",
@@ -165,6 +172,9 @@ export function PrivacyRequestForm({ locale }: { locale: Locale }) {
           <textarea name="message" maxLength={2000} rows={4} />
           <span className="lead-hint">{L.messageHint}</span>
         </label>
+        <p className="lead-notice">
+          {L.noticePre} <Link href="/privacy">{L.privacyLink}</Link>{L.noticePost}
+        </p>
         <button className="primary-button" type="submit" disabled={submitting} aria-busy={submitting}>
           {submitting ? L.submitting : L.submit}
         </button>
