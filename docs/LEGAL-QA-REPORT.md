@@ -170,15 +170,20 @@ needs before it is accurate enough to approve.
 |---|---|---|
 | **privacy** | Operator identity (B1–B5); lawful basis (L1); retention periods (L2); international-transfer *basis* (L3). | Identity rendered from placeholders; basis/retention are `pending` sections showing a neutral note; transfer *location* stated as verified fact, *basis* redacted. Accurate as draft. |
 | **terms** | Operator identity (B1–B5); governing law & venue (L4). | Operator stated as trading name "USAM"; governing-law clause marked `[FOR REVIEW]`/redacted. Accurate as draft. |
-| **cookies** | None outstanding that affect accuracy. | Storage inventory matches code (`usam-locale/theme/consent`); "no optional trackers" matches an empty `OPTIONAL_TECHS`. Could be approvable on its own once reviewed. |
-| **ai-use** | None factual outstanding; describes the local matcher accurately. | Matches `lib/guide-intent` behavior (local, no external model). Approvable on its own once reviewed. |
-| **payments** | Payment provider / PSP per platform (T-ext). | Provider marked `[FOR REVIEW]`/redacted; no checkout exists on Master (verified). The *provider* claim is withheld, so the page is accurate as draft. |
-| **refunds** | Per-platform refund policy/eligibility (platform-owned). | States no automated hand-off (matches outbox reality); directs to the platform. Accurate as draft. |
-| **privacy-requests** | Monitored privacy mailbox (B5); fulfilment timeframes (L2-adjacent). | Receipt-≠-fulfilment stated; timeframes marked still-being-finalized. Accurate as draft. |
+| **cookies** | No content-accuracy gap identified against the code. | Storage inventory matches code (`usam-locale/theme/consent`); "no optional trackers" matches an empty `OPTIONAL_TECHS`. **Still requires human content review + the browser acceptance checks (modal/reset/RTL) before approval — not "fully verified".** |
+| **ai-use** | No content-accuracy gap identified against the code. | Describes a local matcher with no external model, matching `lib/guide-intent`. **Still requires human content review before approval — not "fully verified".** If a real model is ever connected, this page must be updated BEFORE activation. |
+| **payments** | *None blocking the page as written* — it makes **no** provider-specific claim and the Master has no checkout (verified). The payment provider / PSP (T5) is a prerequisite ONLY for *adding* a provider/security claim, which this page deliberately does not make. | Scope = "payment happens on the platform; Master never collects card data; EGP base; other currencies are estimates". All verifiable/true today. Provider line is withheld (`[FOR REVIEW]`), so its absence is correct, not a gap. |
+| **refunds** | *None blocking the page as written.* Binding per-platform refund rules are platform-owned and the page says so; it does not state eligibility windows it cannot back. | States no automated hand-off (matches the outbox reality) and directs the user to the platform. Accurate as draft. |
+| **privacy-requests** | Assessed against the ACTUAL process, not an assumed mailbox/timeframe. The page already describes the real flow (submit → reference receipt → staff review → identity verification before any disclosure/change/deletion) and marks fulfilment timeframes as not-yet-finalized. A **working return channel for the user's request** must exist and match what the page implies; a monitored mailbox is one option, not a mandated one — the form itself persists the request (verified) and is the primary channel. | Receipt-≠-fulfilment stated; identity-check stated; no response-time promise is made (so none can be "invented"). Accurate as draft. Before approval, confirm (a) the request is durably stored and retrievable by staff (verified in code/tests) and (b) whatever channel the final wording names actually operates. |
 
-So **cookies** and **ai-use** have no accuracy-blocking gaps; **privacy**,
-**terms**, **payments**, **refunds**, **privacy-requests** each have specific
-blockers listed above. Approval is per policy, not all-or-nothing.
+Summary: **no policy is "fully verified".** cookies and ai-use have no identified
+*content-accuracy* gap but still need human content review and (for cookies) the
+browser acceptance checks. privacy and terms have specific business/legal
+blockers. payments and refunds are accurate for their actual (no-checkout,
+platform-handoff) scope and are not blocked by platform-owned facts they do not
+assert. privacy-requests is accurate against its real process. Approval is per
+policy, not all-or-nothing — and every policy still requires human review and
+the pending browser checks.
 
 ## Outstanding items, separated by who resolves them
 
@@ -188,7 +193,12 @@ blockers listed above. Approval is per policy, not all-or-nothing.
 - **B2** Registered Arabic legal entity name
 - **B3** Registered address
 - **B4** Commercial registration number (decide whether to publish)
-- **B5** A monitored privacy email address (that it exists and is watched)
+- **B5** A privacy contact channel for the published policies. This is **not** an
+  assumed mandatory mailbox: the privacy-request **form** is the primary channel
+  today (and is verified to persist requests). B5 is required only insofar as the
+  final policy wording names a contact (e.g. an email) — if it does, that address
+  must exist and be monitored; if the policy relies on the form alone, no mailbox
+  is needed. Decide which the approved wording will use.
 
 ### B. Legal decisions requiring review (counsel)
 
@@ -232,10 +242,13 @@ named — I will not invent the answer.
   that evidence is seen, the privacy notice must keep its current `[FOR REVIEW]`
   qualification and **not** claim automated backups.
 - **T5 — Payment provider / PSP per selling platform.** *Not in this repo* (the
-  Master has no checkout). **Evidence needed:** the configured PSP from each
-  platform repository's checkout/payment config, or a statement from each
-  platform owner. Until verified, the payments page keeps the provider marked
-  `[FOR REVIEW]` and makes no provider/security claim.
+  Master has no checkout). **This is NOT a blocker for the Payments page as
+  written** — that page makes no provider-specific or security-certification
+  claim. T5 is a prerequisite ONLY if/when someone wants to *add* such a claim.
+  **Evidence needed then:** the configured PSP from each platform repository's
+  checkout/payment config, or a statement from each platform owner. Until then
+  the payments page keeps the provider line `[FOR REVIEW]`/withheld, which is the
+  correct state — not a gap.
 - **T6 — Platform policy/support URLs (edu/jobs/kids).** *Not server-visible*
   (client-rendered apps). **Evidence needed:** inspect each platform's rendered
   navigation in a browser (QA checklist item 8) and record the real URLs, or
