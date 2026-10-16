@@ -1,9 +1,14 @@
 # USAM legal subsystem — QA report (improvement pass 2)
 
+**Status: Deployed; browser acceptance checks pending.** Live in production at
+commit `3ef3d2e` (not fully verified — the visual/interaction checks below are
+NOT VERIFIED pending a browser review). Policies remain readable, clearly
+labelled **drafts** until final wording is approved.
+
 Date: 2026-10-16. Scope: the focused correction pass on the deployed legal
 subsystem, plus the follow-up that adds the legal-page print stylesheet and the
-corrected platform-directory wording. Production baseline for this report is
-`a4d2220` (the prior pass, already live). This report records **evidence** and
+corrected platform-directory wording. Production is at `3ef3d2e`; this report's
+evidence baseline is `a4d2220` (the prior pass). This report records **evidence** and
 is explicit about what is PASS (verified here), NOT VERIFIED (needs a browser),
 or DEFERRED (needs a business/legal input). HTTP 200 and unit tests alone are
 never reported as proof of UI behavior, and no visual/interaction check is
@@ -151,12 +156,97 @@ browser, EN and AR, light and dark:
    `PLATFORM_VERIFIED_LINKS`, and update `docs/PLATFORM-LEGAL-LINKS.md`. (row 18
    follow-up — these are "not yet discovered/verified", not "unavailable")
 
-## Deferred (needs an input, not an implementation)
+## Readiness for final publication — assessed PER POLICY
 
-- Business/legal inputs tracked in the handoff list (entity, address, privacy
-  mailbox, lawful bases, retention, governing law, international-transfer basis,
-  per-platform policy URLs). These block final publication only; the pages ship
-  as readable, clearly-labelled drafts.
+An unresolved fact is **not** automatically "non-blocking". For each policy, any
+fact that affects that policy's **accuracy** must be **verified, accurately
+qualified (as draft/pending with a neutral note), or removed** before that
+policy is approved. The pages ship today as readable, clearly-labelled drafts
+*because* the unresolved facts are currently qualified/redacted — not because
+they are deemed harmless. Below is the per-policy state and what each policy
+needs before it is accurate enough to approve.
 
-_The print stylesheet (previously listed here as deferred) is now implemented;
-its visual rendering is NOT VERIFIED and is in the browser checklist (check 7)._
+| Policy | Approve-blocking unresolved facts (must be verified/qualified/removed) | Current handling |
+|---|---|---|
+| **privacy** | Operator identity (B1–B5); lawful basis (L1); retention periods (L2); international-transfer *basis* (L3). | Identity rendered from placeholders; basis/retention are `pending` sections showing a neutral note; transfer *location* stated as verified fact, *basis* redacted. Accurate as draft. |
+| **terms** | Operator identity (B1–B5); governing law & venue (L4). | Operator stated as trading name "USAM"; governing-law clause marked `[FOR REVIEW]`/redacted. Accurate as draft. |
+| **cookies** | None outstanding that affect accuracy. | Storage inventory matches code (`usam-locale/theme/consent`); "no optional trackers" matches an empty `OPTIONAL_TECHS`. Could be approvable on its own once reviewed. |
+| **ai-use** | None factual outstanding; describes the local matcher accurately. | Matches `lib/guide-intent` behavior (local, no external model). Approvable on its own once reviewed. |
+| **payments** | Payment provider / PSP per platform (T-ext). | Provider marked `[FOR REVIEW]`/redacted; no checkout exists on Master (verified). The *provider* claim is withheld, so the page is accurate as draft. |
+| **refunds** | Per-platform refund policy/eligibility (platform-owned). | States no automated hand-off (matches outbox reality); directs to the platform. Accurate as draft. |
+| **privacy-requests** | Monitored privacy mailbox (B5); fulfilment timeframes (L2-adjacent). | Receipt-≠-fulfilment stated; timeframes marked still-being-finalized. Accurate as draft. |
+
+So **cookies** and **ai-use** have no accuracy-blocking gaps; **privacy**,
+**terms**, **payments**, **refunds**, **privacy-requests** each have specific
+blockers listed above. Approval is per policy, not all-or-nothing.
+
+## Outstanding items, separated by who resolves them
+
+### A. Business facts the owner must supply (cannot be inspected or invented)
+
+- **B1** Registered English legal entity name (Egyptian LLC)
+- **B2** Registered Arabic legal entity name
+- **B3** Registered address
+- **B4** Commercial registration number (decide whether to publish)
+- **B5** A monitored privacy email address (that it exists and is watched)
+
+### B. Legal decisions requiring review (counsel)
+
+- **L1** Lawful basis per processing purpose (Egypt PDPL 151/2020; Saudi PDPL)
+- **L2** Retention periods per data category + legal retention exceptions
+- **L3** International-transfer basis/safeguard to the EU (the hosting *location*
+  is a verified technical fact — see T2 — but the lawful *mechanism* is a legal
+  determination)
+- **L4** Governing law and dispute venue for the Terms
+
+### C. Technical facts I can/should verify (do NOT ask the owner for these)
+
+These are determinable from the repositories, configuration, or authorized
+infrastructure access. Where access is missing, the exact evidence needed is
+named — I will not invent the answer.
+
+- **T1 — Notification delivery status.** *Inspectable from config.*
+  `lib/api/outbox-worker.ts` resolves the channel from env
+  `USAM_LEAD_NOTIFY_WEBHOOK` / `USAM_LEAD_NOTIFY_EMAIL`; with neither set the
+  worker reports `disabled` and events stay `pending`. **Evidence needed to
+  state production status:** read the running service environment on the host
+  (`/home/ubuntu/usam` systemd env + `dist/server/.dev.vars`) for those two
+  variable names. If present → delivery is configured; if absent → not
+  configured. (The code default and the contact form's `not_configured` path
+  already indicate "not configured"; confirm against the live env before
+  asserting it in a policy.)
+- **T2 — Hosting location.** *Verified earlier via authorized infra access:*
+  AWS EC2 `eu-north-1` (Stockholm). This is the verified fact behind the privacy
+  "International transfers" location statement. Re-confirm with
+  `curl -s http://169.254.169.254/latest/meta-data/placement/region` on the host
+  if a fresh citation is wanted.
+- **T3 — Inbound email routing.** *Verified earlier:* domain MX → Google
+  (`SMTP.GOOGLE.com`), i.e. Google Workspace handles inbound mail. Re-confirm
+  with `dig +short MX usamif.com`. (Note: this is routing only; whether a
+  specific **privacy mailbox** is monitored is business fact B5, not technical.)
+- **T4 — Automated backup coverage.** *Not yet determinable from the repo.* No
+  backup job exists in the codebase (only a one-off manual snapshot was taken).
+  **Evidence needed:** on the host/AWS account, check for an automated backup of
+  the SQLite/D1 state — e.g. a cron entry (`crontab -l`, `/etc/cron.*`), a
+  systemd timer, or an AWS Backup/snapshot plan for the instance/volume. Until
+  that evidence is seen, the privacy notice must keep its current `[FOR REVIEW]`
+  qualification and **not** claim automated backups.
+- **T5 — Payment provider / PSP per selling platform.** *Not in this repo* (the
+  Master has no checkout). **Evidence needed:** the configured PSP from each
+  platform repository's checkout/payment config, or a statement from each
+  platform owner. Until verified, the payments page keeps the provider marked
+  `[FOR REVIEW]` and makes no provider/security claim.
+- **T6 — Platform policy/support URLs (edu/jobs/kids).** *Not server-visible*
+  (client-rendered apps). **Evidence needed:** inspect each platform's rendered
+  navigation in a browser (QA checklist item 8) and record the real URLs, or
+  obtain them from each platform owner. Status is "not yet discovered/verified",
+  not "unavailable".
+
+### D. Browser acceptance checks (pending)
+
+The visual/interaction rows above (NV) — modal, live reset, language toggle +
+RTL, responsive + zoom, in-text link navigation, overlay focus, print preview,
+and platform-nav discovery. None are reported as passed. See the checklist.
+
+_The print stylesheet (previously listed as deferred) is implemented; its visual
+rendering is NOT VERIFIED and is in the browser checklist (check 7)._

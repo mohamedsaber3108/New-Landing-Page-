@@ -1,5 +1,9 @@
 # Platform legal/support link register — verification evidence
 
+**Status: Deployed; browser acceptance checks pending.** Live at commit
+`3ef3d2e`. The edu/jobs/kids rows below are **not yet discovered/verified**
+(pending a browser inspection of their rendered navigation), NOT "unavailable".
+
 Purpose: the Payments page "Platform directory" must link only to destinations
 we have actually verified. This records what was probed, the result, and the
 decision. No sub-path is published unless it returned real, distinct content.
