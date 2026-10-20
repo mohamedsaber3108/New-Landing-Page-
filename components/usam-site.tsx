@@ -130,13 +130,23 @@ export function USAMSite({ kind = "home", slug }: { kind?: RouteKind; slug?: str
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [ready,setReady] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  // Only persist language/theme once the user has actually chosen one. Writing
+  // defaults for a visitor who never chose would (a) create storage with no
+  // consent and (b) re-create the keys immediately after "Reset saved
+  // preferences", so a reset would not survive a reload. A real toggle flips
+  // this ref via the wrapped setters below.
+  const userChose = useRef(false);
   useEffect(() => {
-    try { const language=localStorage.getItem("usam-locale"); const mode=localStorage.getItem("usam-theme"); if(language==="ar"||language==="en")setLocale(language); if(mode==="dark"||mode==="light")setTheme(mode); } catch {}
+    try { const language=localStorage.getItem("usam-locale"); const mode=localStorage.getItem("usam-theme"); if(language==="ar"||language==="en"){setLocale(language);userChose.current=true;} if(mode==="dark"||mode==="light"){setTheme(mode);userChose.current=true;} } catch {}
     setReady(true);
   }, []);
   useEffect(() => {
+    // Always reflect the current locale/theme in the document (not persisted).
     document.documentElement.lang=locale; document.documentElement.dir=locale==="ar"?"rtl":"ltr"; document.documentElement.style.colorScheme=theme;
-    if(ready)try { localStorage.setItem("usam-locale",locale);localStorage.setItem("usam-theme",theme); } catch {}
+    // Persist ONLY when the user has made an explicit choice this/!prior session.
+    if(ready && userChose.current)try { localStorage.setItem("usam-locale",locale);localStorage.setItem("usam-theme",theme); } catch {}
   }, [locale,theme,ready]);
-  return <div className={`usam-app theme-${theme} locale-${locale}`} dir={locale === "ar" ? "rtl" : "ltr"}><Nav locale={locale} setLocale={setLocale} theme={theme} setTheme={setTheme} onGuide={() => setGuideOpen(true)} />{kind === "home" ? <Home locale={locale} onGuide={() => setGuideOpen(true)} /> : <InfoPage slug={slug ?? "explore"} locale={locale} onGuide={() => setGuideOpen(true)} />}<Footer locale={locale} /><GuideConnector theme={theme} locale={locale} open={guideOpen} setOpen={setGuideOpen} /><CookieConsent locale={locale} /><CookieSettingsModal locale={locale} /></div>;
+  const chooseLocale = (value: Locale) => { userChose.current = true; setLocale(value); };
+  const chooseTheme = (value: "light" | "dark") => { userChose.current = true; setTheme(value); };
+  return <div className={`usam-app theme-${theme} locale-${locale}`} dir={locale === "ar" ? "rtl" : "ltr"}><Nav locale={locale} setLocale={chooseLocale} theme={theme} setTheme={chooseTheme} onGuide={() => setGuideOpen(true)} />{kind === "home" ? <Home locale={locale} onGuide={() => setGuideOpen(true)} /> : <InfoPage slug={slug ?? "explore"} locale={locale} onGuide={() => setGuideOpen(true)} />}<Footer locale={locale} /><GuideConnector theme={theme} locale={locale} open={guideOpen} setOpen={setGuideOpen} /><CookieConsent locale={locale} /><CookieSettingsModal locale={locale} /></div>;
 }
