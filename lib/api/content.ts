@@ -101,8 +101,8 @@ export const LEGAL_TYPES = POLICY_TYPES;
 export type LegalType = PolicyType;
 
 export async function publicLegal(type: LegalType, locale: Locale) {
-  // publicPolicyView redacts draft bodies/placeholders — only published policies
-  // return full text. Drafts return a neutral "being finalized" notice.
+  // publicPolicyView returns the full policy content; a version/effective date
+  // appears only for a published release. No draft/review framing is included.
   const policy = await publicPolicyView(type, locale);
   if (!policy) return null;
   return {
@@ -115,9 +115,10 @@ export async function publicLegal(type: LegalType, locale: Locale) {
       id: s.id,
       title: s.heading,
       body: s.body.join("\n\n"),
-      pending: (s as { pending?: boolean }).pending === true,
     })),
-    approval: policy.approval,
+    // Expose only a boolean publication state — never the internal lifecycle
+    // string ("draft"/"in_review"/…), which must not leak into public output.
+    published: policy.published,
     version: policy.version,
     effectiveAt: policy.effectiveAt,
     updatedAt: policy.updatedAt,

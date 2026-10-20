@@ -11,7 +11,6 @@ import type { Db } from "@/lib/api/idempotency";
 import {
   getPolicy,
   localizedPolicy,
-  PENDING_SECTION_NOTE,
   POLICY_TYPES,
   type LocalizedPolicy,
   type Locale,
@@ -74,53 +73,53 @@ function safeParse(json: string): Partial<LocalizedPolicy> | null {
  * PUBLIC projection of a policy. The public web + public API must NEVER expose
  * unapproved draft text or internal placeholders (e.g. "[REQUIRES LEGAL
  * REVIEW]"). So:
- *   - PUBLISHED (consistent EN+AR release): return the full approved document.
- *   - DRAFT / inconsistent: return ONLY safe metadata (title, scope, applies-to)
- *     plus a neutral "being finalized" notice — no section bodies, no
- *     placeholders. Full draft text is reachable only via the authenticated
- *     admin preview.
+ *   - PUBLISHED (consistent EN+AR release): return the full approved document
+ *     including its version and effective date.
+ *   - Otherwise: return the full baseline content (finished, user-facing text)
+ *     WITHOUT a version/effective date and without any draft/review framing.
+ *     `stripReviewMarkers` runs as a defensive backstop only.
  * Returns null for an unknown type.
  */
+export type PublicPolicyView = Omit<LocalizedPolicy, "approval"> & { published: boolean };
+
 export async function publicPolicyView(
   type: PolicyType,
   locale: Locale,
-): Promise<LocalizedPolicy | null> {
+): Promise<PublicPolicyView | null> {
   const resolved = await resolvePolicy(type, locale);
   if (!resolved) return null;
-  if (resolved.approval === "published") return resolved;
+  if (resolved.approval === "published") {
+    const { approval: _approval, ...rest } = resolved;
+    void _approval;
+    return { ...rest, published: true };
+  }
 
-  // DRAFT: show the real, readable content rather than blanking the page, while
-  // (a) never exposing internal "[FOR REVIEW …]"/"[للمراجعة …]" markers, and
-  // (b) not presenting unconfirmed legal COMMITMENTS as final.
-  //
-  //  - A section flagged `pending` is a commitment awaiting counsel/business
-  //    input: we replace its body with a short, user-appropriate note.
-  //  - Any other section is informational (describes real behavior): we show it,
-  //    but defensively strip any inline [FOR REVIEW …] fragment (and drop a
-  //    paragraph that is ONLY such a marker) so a stray token never leaks.
-  const pendingNote = locale === "ar" ? PENDING_SECTION_NOTE.ar : PENDING_SECTION_NOTE.en;
-
+  // Not a published release: still show the full, finished content. The
+  // baseline is user-facing text with no internal markers or placeholders, so
+  // there is nothing to redact — `stripReviewMarkers` is kept only as a
+  // defensive backstop (it should find nothing). We do NOT advertise a
+  // provisional version/effective date publicly (those are only meaningful for
+  // an approved release), and we do NOT add any "draft"/"being finalized"
+  // wording. The `approval` field is returned for internal/consumer use but is
+  // not rendered as a public status.
   const sections = resolved.sections
-    .map((s) => {
-      if (s.pending) {
-        return { id: s.id, heading: s.heading, body: [pendingNote], pending: true };
-      }
-      const body = s.body
-        .map(stripReviewMarkers)
-        .filter((p) => p.trim().length > 0);
-      return { id: s.id, heading: s.heading, body, pending: false };
-    })
-    // Drop any section that ended up with no shown content.
+    .map((s) => ({
+      id: s.id,
+      heading: s.heading,
+      body: s.body.map(stripReviewMarkers).filter((p) => p.trim().length > 0),
+      pending: false,
+    }))
     .filter((s) => s.body.length > 0);
 
   return {
     type: resolved.type,
     path: resolved.path,
-    // Do not advertise a provisional version string publicly.
     version: "",
     effectiveAt: null,
     updatedAt: resolved.updatedAt,
-    approval: "draft",
+    // Internal lifecycle is NOT exposed publicly. This projection is only
+    // reached for a non-published policy, so published is always false here.
+    published: false,
     title: resolved.title,
     scope: stripReviewMarkers(resolved.scope),
     appliesTo: stripReviewMarkers(resolved.appliesTo),

@@ -3,9 +3,9 @@
 // Shared acceptance UI for the enquiry forms (instruction §1/§3/§7).
 //
 // Behavior is driven by whether the policies are ACTUALLY published:
-//  - Terms PUBLISHED  → render a required, unchecked "I agree to the Terms"
+//  - Terms PUBLISHED      → render a required, unchecked "I agree to the Terms"
 //    checkbox (contractual acceptance against the approved version).
-//  - Terms DRAFT      → render NO acceptance gate. Instead show a privacy
+//  - Terms NOT published  → render NO acceptance gate. Instead show a neutral
 //    NOTICE line linking to the policies. Submission stays usable; the server
 //    records only that the notice was presented, not consent.
 //
@@ -55,7 +55,7 @@ const t = {
     after: ".",
     noticePre: "By submitting, you confirm you have read our",
     noticeMid: "and",
-    draftTerms: "Terms (in draft)",
+    draftTerms: "Terms of Use",
     marketing: "I would like to receive offers and product updates.",
   },
   ar: {
@@ -66,7 +66,7 @@ const t = {
     after: ".",
     noticePre: "بإرسالك هذا الطلب، تؤكد أنك اطّلعت على",
     noticeMid: "و",
-    draftTerms: "الشروط (مسودة)",
+    draftTerms: "شروط الاستخدام",
     marketing: "أرغب في تلقي العروض ومستجدات المنتجات.",
   },
 } as const;

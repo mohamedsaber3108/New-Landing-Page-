@@ -113,7 +113,7 @@ export const routes: Record<string, { title: string; label: string; intro: strin
   trust: { title: "Built with clear boundaries and care.", label: "TRUST CENTER", intro: "Explore how USAM approaches privacy, responsible AI, product boundaries, and child safety." },
   faq: { title: "Useful answers, without the jargon.", label: "FAQ", intro: "Questions about the ecosystem, products, AI guides, accounts, and where to start." },
   guide: { title: "Tell USAM what you want to achieve.", label: "USAM GUIDE", intro: "The guide is an ecosystem router. It helps you decide where to begin; product-specific guides support the next step." },
-  legal: { title: "USAM Legal Center.", label: "LEGAL CENTER", intro: "Every policy for the USAM Master website in one place, with scope, version, and effective date. Platform-specific terms live on each platform." },
+  legal: { title: "USAM Legal Center.", label: "LEGAL CENTER", intro: "Every policy for the USAM Master website in one place, with its scope and last-updated date. Platform-specific terms live on each platform." },
   privacy: { title: "Privacy Policy.", label: "LEGAL", intro: "How the USAM Master website handles your information." },
   terms: { title: "Terms of Use.", label: "LEGAL", intro: "The rules for using the USAM Master website. Buying and accounts happen on the platforms." },
   cookies: { title: "Cookie Policy & Settings.", label: "LEGAL", intro: "The browser storage this website uses, and controls to review or change it." },
