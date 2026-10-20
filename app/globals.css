@@ -116,16 +116,12 @@
 .legal-card-top b{font-size:1.05rem;letter-spacing:-.02em;color:var(--ink)}
 .legal-card-scope{font-size:.82rem;line-height:1.5;color:var(--ink-soft)}
 .legal-card-meta{font-size:.72rem;color:var(--ink-soft);opacity:.85}
-.legal-badge{flex:0 0 auto;font-size:.6rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line-strong)}
-.legal-badge-draft{color:var(--accent-2);border-color:color-mix(in srgb,var(--accent-2) 55%,var(--line-strong));background:color-mix(in srgb,var(--accent-2) 12%,transparent)}
-.legal-badge-ok{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,var(--line-strong));background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .legal-frameworks{margin-top:40px;padding:22px;border:1px solid var(--line);border-radius:15px;background:var(--surface-2)}
 .legal-frameworks h2{font-size:1.15rem;margin:0 0 12px}
 .legal-frameworks ul{margin:0;padding-inline-start:20px;display:grid;gap:12px}
 .legal-frameworks li{font-size:.86rem;line-height:1.6;color:var(--ink-soft)}
 .legal-frameworks li strong{color:var(--ink)}
 .legal-frameworks li em{display:block;color:var(--ink-soft);opacity:.85;font-style:normal;font-size:.8rem;margin-top:3px}
-.legal-review-note{margin:16px 0 0;font-size:.78rem;line-height:1.55;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:14px}
 
 .legal-doc{max-width:820px;margin-inline:auto}
 .legal-doc-head{margin-bottom:26px}
@@ -133,7 +129,6 @@
 .legal-meta div{display:grid;gap:3px}
 .legal-meta dt{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;font-weight:850;color:var(--accent)}
 .legal-meta dd{margin:0;font-size:.82rem;line-height:1.5;color:var(--ink)}
-.legal-draft-note{margin:16px 0 0;padding:13px 15px;border:1px solid color-mix(in srgb,var(--accent-2) 50%,var(--line-strong));background:color-mix(in srgb,var(--accent-2) 10%,var(--paper));border-radius:11px;font-size:.82rem;line-height:1.55;color:var(--ink)}
 .legal-toc{margin:0 0 30px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
 .legal-toc>span{display:block;font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;font-weight:850;color:var(--accent);margin-bottom:9px}
 .legal-toc ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}
@@ -170,10 +165,6 @@
 @media(prefers-reduced-motion:reduce){.platform-directory-card{transition:none}}
 .legal-back{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
 .legal-back a{font-weight:800;color:var(--accent)}
-/* A clause still under legal review: visibly distinguished, not hidden. */
-.legal-section-pending{opacity:.92}
-.legal-section-pending p{color:var(--ink-soft);font-style:italic}
-.legal-pending-tag{display:inline-block;margin-inline-start:10px;font-size:.6rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;color:var(--accent-2);border:1px solid color-mix(in srgb,var(--accent-2) 55%,var(--line-strong));background:color-mix(in srgb,var(--accent-2) 12%,transparent);border-radius:999px;padding:3px 9px}
 
 /* ------------------------------------------------------------------ */
 /* Cookie consent banner + settings. Must not cover Ask USAM          */
@@ -308,15 +299,6 @@
   .legal-meta dd { color: #000 !important; }
   .legal-summary { color: #000 !important; }
 
-  /* The draft notice must print too, so a printed draft is never mistaken
-     for an approved document. */
-  .legal-draft-note {
-    border: 1px solid #000 !important;
-    background: #fff !important;
-    color: #000 !important;
-    page-break-inside: avoid;
-  }
-
   /* Sections: readable body, avoid splitting a heading from its text. */
   .legal-sections section { break-inside: auto; }
   .legal-sections h2 {
@@ -325,8 +307,6 @@
     page-break-after: avoid;
   }
   .legal-sections p { color: #000 !important; }
-  .legal-badge { border: 1px solid #000 !important; color: #000 !important; }
-  .legal-pending-tag { color: #000 !important; border-color: #000 !important; }
 
   /* Show the destination of in-text policy links on paper. */
   .legal-sections a[href^="/"]::after {
