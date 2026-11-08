@@ -321,3 +321,34 @@
 
   a { color: #000 !important; text-decoration: underline; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Official contact details (footer + Contact page). Logical properties */
+/* only, so the block mirrors automatically in Arabic RTL.              */
+/* ------------------------------------------------------------------ */
+.contact-info{font-style:normal;display:grid;gap:12px;margin:0}
+.contact-info-row{display:flex;align-items:flex-start;gap:10px;margin:0}
+.contact-info-row>svg{flex:0 0 auto;margin-top:2px;color:var(--accent)}
+.contact-info-row>span{display:grid;gap:2px;min-width:0}
+.contact-info-row b{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;font-weight:850;color:var(--ink)}
+.contact-info-row span span,.contact-info-row a{font-size:.86rem;line-height:1.5;color:var(--ink-soft);overflow-wrap:anywhere}
+.contact-info-row a{color:var(--accent);font-weight:750;text-decoration:none}
+.contact-info-row a:hover{text-decoration:underline}
+.contact-info-row a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+/* Footer: a full-width row between the link columns and the utility row. */
+.site-footer>.footer-contact{grid-column:1/-1;display:grid;gap:12px;padding-top:20px;border-top:1px solid var(--line)}
+.site-footer>.footer-contact .contact-info{grid-auto-flow:column;grid-auto-columns:minmax(0,max-content);gap:12px 40px;justify-content:start}
+.site-footer .contact-info-row a{font-size:.8rem}
+.site-footer .contact-info-row span span{font-size:.8rem}
+@media(max-width:720px){.site-footer>.footer-contact .contact-info{grid-auto-flow:row;grid-auto-columns:1fr}}
+/* Contact page: a card matching the existing bordered panels. */
+.contact-info-page{padding:22px;border:1px solid var(--line);border-radius:15px;background:var(--surface-2);max-width:740px;margin:0 auto 34px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:18px 28px}
+.contact-card-title{font-size:1.15rem;letter-spacing:-.03em;margin:0 0 6px;color:var(--ink)}
+.contact-card-note{font-size:.84rem;line-height:1.6;color:var(--ink-soft);margin:0 0 16px;max-width:60ch}
+.contact-card{max-width:740px;margin:0 auto 34px}
+.contact-card .contact-info-page{margin:0}
+@media print{.contact-info-row a{color:#000!important}}
+.legal-contact{margin-top:32px}
+.legal-contact h2{font-size:1.15rem;margin:0 0 12px;color:var(--ink)}
+.legal-contact .contact-info-page{margin:0}
+@media print{.legal-contact{break-inside:avoid}}

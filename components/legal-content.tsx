@@ -25,6 +25,7 @@ import { products, trustedDomain } from "@/data/products";
 import { parseInlineLinks } from "@/lib/legal/inline-links";
 import { CookieSettingsPanel, openCookieSettings } from "./cookie-consent";
 import { PrivacyRequestForm } from "./privacy-request-form";
+import { ContactInfo } from "./contact-info";
 
 const ui = {
   en: {
@@ -205,6 +206,11 @@ export function LegalCenter({ locale }: { locale: Locale }) {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="legal-contact" aria-labelledby="legal-contact-h">
+        <h2 id="legal-contact-h">{locale === "ar" ? "أسئلة عن هذه السياسات؟" : "Questions about these policies?"}</h2>
+        <ContactInfo locale={locale} variant="page" />
       </section>
     </div>
   );
