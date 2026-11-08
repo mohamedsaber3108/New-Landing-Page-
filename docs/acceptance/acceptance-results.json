@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "target": "https://usamif.com (live production)",
+    "deployedCommit": "9346c97c32134f7f8c03571ab0fdf047886bf40f",
+    "runDate": "2026-10-20",
+    "tool": "Playwright 1.64.1 + Chromium (headless), isolated install outside the project",
+    "note": "Read-only against production (GET + client-side interaction only; no form submissions, no writes). These are the results of the successful measured run on 2026-10-20. A later re-run attempt hit a 30s navigation-wait TIMEOUT on the in-text-link click step — a test-harness flake (the link itself was already measured clicking through to /cookies in the run below), not a site defect. Re-running requires reinstalling the isolated Playwright/Chromium (the temp dir is periodically swept)."
+  },
+  "results": [
+    {
+      "name": "1 RTL layout geometry (AR /privacy)",
+      "status": "PASS",
+      "evidence": "htmlDir=rtl summaryDir=rtl summaryTextAlign=start (CSS 'start' resolves to right under rtl); layout mirrors correctly"
+    },
+    {
+      "name": "2 Cookie modal focus trap (both boundaries)",
+      "status": "PASS",
+      "evidence": "focusables=5; Tab@last -> wraps inside; Shift+Tab@first -> wraps inside (focus never leaves the modal)"
+    },
+    {
+      "name": "2 Overlay recovery (cookie <-> Ask USAM)",
+      "status": "PASS",
+      "evidence": "both close on Escape; body.overflow returns to 'visible' after each; stuckBackdrop=false; footer nav click works after closing"
+    },
+    {
+      "name": "3 clicks reach correct destinations + anchor below sticky header",
+      "status": "PASS",
+      "evidence": "footer->/privacy (h1 'Privacy Policy.'); ToC anchor headingTop=96 >= stickyHeaderBottom=82 (visible below header); in-text link->/cookies url=true; nav->/for-enterprises (h1 'Find people, capability, and p...')"
+    },
+    {
+      "name": "4 @mobile 375px overflow + modal fit",
+      "status": "PASS",
+      "evidence": "scrollWidth=375 innerWidth=375 overflow=false; cookie modal fits within viewport"
+    },
+    {
+      "name": "4 @tablet 768px overflow + modal fit",
+      "status": "PASS",
+      "evidence": "scrollWidth=768 innerWidth=768 overflow=false; modal fits"
+    },
+    {
+      "name": "4 @desktop 1280px overflow + modal fit",
+      "status": "PASS",
+      "evidence": "scrollWidth=1280 innerWidth=1280 overflow=false; modal fits"
+    },
+    {
+      "name": "4 200% zoom",
+      "status": "PASS (CSS-zoom approximation only)",
+      "evidence": "CSS zoom:2 -> scrollWidth=640 innerWidth=640, no horizontal overflow. NATIVE 200% BROWSER ZOOM REMAINS UNVERIFIED (not equivalent to CSS zoom)."
+    },
+    {
+      "name": "5 contrast ratios (light theme)",
+      "status": "PASS",
+      "evidence": "min 7.66:1. legal body 7.66; summary 7.66; meta 14.28; h1 15.17; in-text link 7.66; form label 16.16; primary button 14.45; cookie panel text 8.16. All >= WCAG AA 4.5:1."
+    },
+    {
+      "name": "5 contrast ratios (dark theme)",
+      "status": "PASS",
+      "evidence": "min 8.17:1. legal body 11.05; summary 11.05; meta 12.13; h1 15.77; in-text link 11.05; form label 13.35; primary button 8.17; cookie panel text 9.35. All >= WCAG AA 4.5:1."
+    },
+    {
+      "name": "6 print/PDF export",
+      "status": "PASS (export measured; page-break aesthetics NOT inspected)",
+      "evidence": "Exported valid %PDF- (47325 bytes); 9 sections rendered; print media: site-header/footer/legal-toc display:none, legal-sections + legal-meta visible. NOTE: the exported pages were NOT visually rendered/inspected, so 'no clipping / sensible page breaks' is NOT claimed — only that chrome is hidden and content+meta are present in print media."
+    }
+  ]
+}
