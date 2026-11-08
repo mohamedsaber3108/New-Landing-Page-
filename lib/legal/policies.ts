@@ -23,6 +23,8 @@
 // module is the built-in baseline/default and the fallback when no published
 // override exists.
 
+import { SITE_CONTACT } from "@/lib/site-contact";
+
 export type Locale = "en" | "ar";
 
 /** Lifecycle of a policy release (mirrors the admin workflow + ref 02 §6). */
@@ -98,11 +100,19 @@ export const RESPONSIBLE_CONTACT = {
   address: "" as string,
   addressAr: "" as string,
   registrationNumber: "" as string,
-  // A monitored privacy email, when one is published. Empty = direct users to
-  // the Privacy Requests form instead (the verified, working channel).
-  privacyEmail: "" as string,
-  contactLabel: "USAM Privacy Team",
+  // Official contact email (shared with the footer/Contact page via
+  // lib/site-contact). It is described as USAM's contact email — not as a
+  // dedicated, separately staffed privacy mailbox.
+  privacyEmail: SITE_CONTACT.email as string,
+  contactLabel: "USAM",
 } as const;
+
+// Shared, accurate sentences about how to reach USAM (EN+AR). Built once so the
+// address and email are identical in every policy.
+const CONTACT_DETAILS: { en: string; ar: string } = {
+  en: `Email: ${SITE_CONTACT.email}. Address: ${SITE_CONTACT.address.en}.`,
+  ar: `البريد الإلكتروني: ${SITE_CONTACT.email}. العنوان: ${SITE_CONTACT.address.ar}.`,
+};
 
 // Build the operator-identity sentence from whatever verified facts exist. With
 // no registered name supplied it reads with the trading name only — a true,
@@ -132,8 +142,8 @@ const OPERATOR_SENTENCE: { en: string; ar: string } = (() => {
 // the verified working channel. Either way the sentence is accurate.
 const PRIVACY_CONTACT_SENTENCE: { en: string; ar: string } = RESPONSIBLE_CONTACT.privacyEmail
   ? {
-      en: `For privacy matters, contact the ${RESPONSIBLE_CONTACT.contactLabel} at ${RESPONSIBLE_CONTACT.privacyEmail}, or use the Privacy Requests page.`,
-      ar: `لمسائل الخصوصية، تواصل مع فريق خصوصية يوزم عبر ${RESPONSIBLE_CONTACT.privacyEmail}، أو استخدم صفحة طلبات الخصوصية.`,
+      en: `For privacy matters, contact ${RESPONSIBLE_CONTACT.contactLabel} at ${RESPONSIBLE_CONTACT.privacyEmail} (${SITE_CONTACT.address.en}), or use the Privacy Requests page for questions and data requests.`,
+      ar: `لمسائل الخصوصية، تواصل مع ${RESPONSIBLE_CONTACT.contactLabel === "USAM" ? "يوزم" : RESPONSIBLE_CONTACT.contactLabel} عبر ${RESPONSIBLE_CONTACT.privacyEmail} (${SITE_CONTACT.address.ar})، أو استخدم صفحة طلبات الخصوصية للأسئلة وطلبات البيانات.`,
     }
   : {
       en: "For privacy matters, use the Privacy Requests page on this website — it is the direct channel for questions and data requests about information this site holds.",
@@ -218,13 +228,15 @@ const noEffectiveDate = null;
 // the real date of the change. A published release additionally carries its own
 // effective date set by the admin workflow at publish time.
 const REVISIONS: Record<PolicyType, string> = {
-  privacy: "2026-10-16",
-  terms: "2026-10-15",
+  // 2026-11-08: official contact address + email added (privacy, terms,
+  // refunds, payments incl. a payment-questions section, privacy-requests).
+  privacy: "2026-11-08",
+  terms: "2026-11-08",
   cookies: "2026-10-14",
-  refunds: "2026-10-16",
-  payments: "2026-10-16",
+  refunds: "2026-11-08",
+  payments: "2026-11-08",
   "ai-use": "2026-10-15",
-  "privacy-requests": "2026-10-15",
+  "privacy-requests": "2026-11-08",
 };
 
 // ---------------------------------------------------------------------------
@@ -408,14 +420,14 @@ const privacy: Policy = {
         heading: "Changes and contact",
         body: [
           "We keep previous versions of this policy and record its version with your acknowledgement. If we make a material change we will show it appropriately rather than forcing acceptance on every visit.",
-          `Privacy contact: the USAM Privacy Team at ${RESPONSIBLE_CONTACT.privacyEmail}. You can also submit a request through the [[Privacy Requests|privacy-requests]] page.`,
+          `Contact us about this policy: ${CONTACT_DETAILS.en} You can also submit a request through the [[Privacy Requests|privacy-requests]] page.`,
         ],
       },
       ar: {
         heading: "التغييرات والتواصل",
         body: [
           "نحتفظ بالإصدارات السابقة من هذه السياسة ونسجّل إصدارها مع إقرارك. وإذا أجرينا تغييرًا جوهريًا فسنعرضه بشكل مناسب بدلًا من فرض القبول في كل زيارة.",
-          `جهة التواصل للخصوصية: فريق خصوصية يوزم عبر ${RESPONSIBLE_CONTACT.privacyEmail}. ويمكنك أيضًا إرسال طلب عبر [[صفحة طلبات الخصوصية|privacy-requests]].`,
+          `للتواصل بشأن هذه السياسة: ${CONTACT_DETAILS.ar} ويمكنك أيضًا إرسال طلب عبر [[صفحة طلبات الخصوصية|privacy-requests]].`,
         ],
       },
     },
@@ -520,6 +532,21 @@ const terms: Policy = {
         body: [
           "يُقدَّم الموقع على أساس «حسب المتاح». وبالقدر الذي يسمح به القانون، لا نتحمّل المسؤولية عن القرارات التي تتخذها بعد مغادرتك إلى منصة؛ فتلك تحكمها شروط المنصة.",
           "تخضع هذه الشروط للقوانين المعمول بها في المكان الذي تعمل فيه يوزم، وتختص بأي نزاع المحاكم المختصة هناك. ولا شيء في هذه الشروط يلغي حقوق حماية المستهلك المقرّرة لك قانونًا.",
+        ],
+      },
+    },
+    {
+      id: "contact",
+      en: {
+        heading: "Contact",
+        body: [
+          `Questions about these terms or this website: ${CONTACT_DETAILS.en} You can also use the [[Contact page|contact]].`,
+        ],
+      },
+      ar: {
+        heading: "التواصل",
+        body: [
+          `للاستفسار عن هذه الشروط أو هذا الموقع: ${CONTACT_DETAILS.ar} ويمكنك أيضًا استخدام [[صفحة التواصل|contact]].`,
         ],
       },
     },
@@ -690,14 +717,14 @@ const refunds: Policy = {
         heading: "If you contact us here",
         body: [
           "The fastest way to get a refund is to go straight to the platform where you paid — it holds your order and is the only party that can approve a refund. The Master website cannot approve, process, or escalate a refund.",
-          "If you do send a refund-related message through this website, it is stored securely and you receive a reference number. That reference only confirms we received your message — it is not approval, and it is not confirmation that your request has been escalated or actioned. We do not currently operate an automated hand-off that forwards your message to a platform, so please also contact the platform directly.",
+          `If you do send a refund-related message through this website, it is stored securely and you receive a reference number. That reference only confirms we received your message — it is not approval, and it is not confirmation that your request has been escalated or actioned. We do not currently operate an automated hand-off that forwards your message to a platform, so please also contact the platform directly. You can reach us at ${SITE_CONTACT.email} (${SITE_CONTACT.address.en}).`,
         ],
       },
       ar: {
         heading: "إذا تواصلت معنا هنا",
         body: [
           "أسرع طريقة للحصول على استرداد هي التوجّه مباشرةً إلى المنصة التي دفعت فيها — فهي التي تحتفظ بطلبك وهي الجهة الوحيدة التي يمكنها الموافقة على الاسترداد. ولا يمكن للموقع الرئيسي الموافقة على استرداد أو معالجته أو تصعيده.",
-          "وإذا أرسلت رسالة متعلقة بالاسترداد عبر هذا الموقع، فإنها تُحفظ بأمان وتحصل على رقم مرجعي. وهذا الرقم يؤكد استلامنا لرسالتك فقط — وليس موافقة، وليس تأكيدًا بأن طلبك قد صُعِّد أو نُفِّذ. ولا نشغّل حاليًا تحويلًا تلقائيًا يمرّر رسالتك إلى منصة، لذا يرجى أيضًا التواصل مع المنصة مباشرةً.",
+          `وإذا أرسلت رسالة متعلقة بالاسترداد عبر هذا الموقع، فإنها تُحفظ بأمان وتحصل على رقم مرجعي. وهذا الرقم يؤكد استلامنا لرسالتك فقط — وليس موافقة، وليس تأكيدًا بأن طلبك قد صُعِّد أو نُفِّذ. ولا نشغّل حاليًا تحويلًا تلقائيًا يمرّر رسالتك إلى منصة، لذا يرجى أيضًا التواصل مع المنصة مباشرةً. ويمكنك مراسلتنا على ${SITE_CONTACT.email} (${SITE_CONTACT.address.ar}).`,
         ],
       },
     },
@@ -753,6 +780,23 @@ const payments: Policy = {
         body: [
           "على المنصة البائعة، يُعالَج الدفع عبر صفحة الدفع المُستضافة لدى المزوّد أو الحقول المُرمَّزة حيثما يُتاح، بحيث يتولّى مزوّد الدفع بيانات البطاقة بدلًا من حفظها في سجلات تطبيقات يوزم أو أدوات الدعم.",
           "ما يمكنك توقّعه: لن يُطلب منك على الموقع الرئيسي أي بيانات بطاقة، لذا لا شيء لتأمينه هنا. وعند الدفع على منصة، تصف تلك المنصة مزوّد الدفع وإجراءات الأمان وأي شهادات عند صفحة الدفع. ونحن لا نذكر إلا حقائق أمان يمكننا إثباتها؛ ولا نعرض شارات شهادات أو ادّعاءات شراكة بنكية أو شعارات شبكات بطاقات على هذا الموقع.",
+        ],
+      },
+    },
+    {
+      id: "payment-help",
+      en: {
+        heading: "Payment questions and complaints",
+        body: [
+          "For a charge, receipt, billing issue or refund, contact the platform where you paid first — it holds your order and is the only party that can review, correct or reverse a payment.",
+          `If you have a question about the payment information on this website, or a payment issue or complaint you could not resolve with the platform, write to us. ${CONTACT_DETAILS.en} Please include the platform name and your order reference, and never send card numbers, security codes or banking passwords. This website cannot process, approve or reverse a payment or refund; we will point you to the right platform channel.`,
+        ],
+      },
+      ar: {
+        heading: "أسئلة وشكاوى الدفع",
+        body: [
+          "لأي خصم أو إيصال أو مشكلة فوترة أو استرداد، تواصل أولًا مع المنصة التي دفعت فيها — فهي التي تحتفظ بطلبك وهي الجهة الوحيدة التي يمكنها مراجعة الدفعة أو تصحيحها أو عكسها.",
+          `وإذا كان لديك سؤال عن معلومات الدفع على هذا الموقع، أو مشكلة أو شكوى تتعلق بالدفع لم تتمكن من حلّها مع المنصة، فراسلنا. ${CONTACT_DETAILS.ar} يُرجى ذكر اسم المنصة ورقم طلبك، وعدم إرسال أرقام البطاقات أو رموز الأمان أو كلمات مرور البنك. ولا يستطيع هذا الموقع معالجة دفعة أو استردادٍ أو الموافقة عليهما أو عكسهما؛ وسنرشدك إلى قناة المنصة المناسبة.`,
         ],
       },
     },
@@ -929,6 +973,21 @@ const privacyRequests: Policy = {
         heading: "البيانات لدى منصة",
         body: [
           "إذا كان طلبك يخص بيانات لدى منصة (حسابك، سجلات التعلم، الطلبات، المدفوعات)، فقدّم الطلب على تلك المنصة التي تشغّل مركز خصوصية وتحققًا خاصًا بها. ويمكننا إرشادك إلى المكان الصحيح.",
+        ],
+      },
+    },
+    {
+      id: "contact",
+      en: {
+        heading: "Contact",
+        body: [
+          `The form on this page is the quickest way to make a request. For anything else about your information: ${CONTACT_DETAILS.en} Please do not include passwords or payment details in an email.`,
+        ],
+      },
+      ar: {
+        heading: "التواصل",
+        body: [
+          `النموذج في هذه الصفحة هو أسرع وسيلة لتقديم طلب. ولأي أمر آخر يتعلق بمعلوماتك: ${CONTACT_DETAILS.ar} يُرجى عدم إدراج كلمات المرور أو بيانات الدفع في أي رسالة بريد إلكتروني.`,
         ],
       },
     },

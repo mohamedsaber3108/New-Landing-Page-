@@ -4,6 +4,8 @@ import { ConnectedJourney } from "./research-landing";
 import { useState } from "react";
 import { products, routes } from "@/data/products";
 import { ContactLeadForm } from "./contact-lead-form";
+import { ContactInfo } from "./contact-info";
+import { SITE_CONTACT } from "@/lib/site-contact";
 import { ExploreSearch } from "./explore-search";
 import { EnquiryForm } from "./enquiry-form";
 import { LegalCenter, LegalPolicy } from "./legal-content";
@@ -44,7 +46,8 @@ const content: Record<string, Section[]> = {
  pricing: [
  ["Choose the product first", "Plans and available features are managed by each platform. Open your destination and review its current offer before purchasing.", "اختر المنتج أولًا", "تدير كل منصة الخطط والمزايا المتاحة. افتح وجهتك وراجع عرضها الحالي قبل الشراء."],
  ["Currency and prices", "The base currency for USAM-owned pricing is the Egyptian Pound (EGP). This website does not sell or take payment and does not invent prices. Any figure in another currency is an estimate, not the final charge — the final amount, currency, taxes and fees are shown on the selling platform before you pay. See Payment Security & Currency.", "العملة والأسعار", "العملة الأساسية لتسعير يوزم هي الجنيه المصري (EGP). ولا يبيع هذا الموقع ولا يستقبل مدفوعات ولا يخترع أسعارًا. وأي مبلغ بعملة أخرى هو تقدير وليس المبلغ النهائي — ويُعرض المبلغ النهائي وعملته والضرائب والرسوم على المنصة البائعة قبل الدفع. راجع «أمان الدفع والعملة»."],
- ["For organizations", "Specify the number of participants, required services, and delivery period when discussing a custom scope.", "للمؤسسات", "حدّد عدد المشاركين والخدمات المطلوبة ومدة التنفيذ عند مناقشة نطاق مخصص."]],
+ ["For organizations", "Specify the number of participants, required services, and delivery period when discussing a custom scope.", "للمؤسسات", "حدّد عدد المشاركين والخدمات المطلوبة ومدة التنفيذ عند مناقشة نطاق مخصص."],
+ ["Billing and payment questions", `For a charge, invoice or refund, contact the platform where you paid first. For questions about pricing information on this website, or a payment issue you could not resolve, email ${SITE_CONTACT.email} (${SITE_CONTACT.address.en}).`, "أسئلة الفوترة والدفع", `لأي خصم أو فاتورة أو استرداد، تواصل أولًا مع المنصة التي دفعت فيها. ولأسئلة معلومات الأسعار على هذا الموقع، أو مشكلة دفع لم تُحل، راسلنا على ${SITE_CONTACT.email} (${SITE_CONTACT.address.ar}).`]],
  contact: [
  ["Product help", "Open the platform where you need help and use its support channel. Include the page, what happened, and the result you expected.", "مساعدة في منتج", "افتح المنصة التي تحتاج المساعدة فيها واستخدم قناة دعمها. وضّح الصفحة وما حدث والنتيجة المتوقعة."],
  ["Partnership enquiries", "Prepare a brief with your organization, audience, objective, timeline, and a reply address. Start with the platform relevant to your proposal.", "استفسارات الشراكات", "جهّز نبذة تشمل مؤسستك والفئة المستهدفة والهدف والموعد ووسيلة الرد، ثم ابدأ بالمنصة المناسبة للمقترح."],
@@ -184,6 +187,7 @@ export function PageContent({slug,locale,onGuide}:{slug:string;locale:Locale;onG
  return <div className="page-details">
  {slug==="faq"?<div className="faq-list">{faq.map(([title,body,at,ab])=><details key={title}><summary>{ar?at:title}</summary><p>{ar?ab:body}</p></details>)}</div>:<div className="editorial-sections">{(content[slug]??[]).map(([title,body,at,ab],i)=><article key={title}><span>{String(i+1).padStart(2,"0")}</span><h2>{ar?at:title}</h2><p>{ar?ab:body}</p></article>)}</div>}
  {(slug==="for-enterprises"||slug==="government")&&<p className="enquiry-cta"><a className="primary-button" href="#enquiry-form">{slug==="government"?(ar?"قدّم مقترح شراكة":"Submit a partnership proposal"):(ar?"تواصل مع فريق المؤسسات":"Contact the enterprise team")}</a></p>}
+ {slug==="contact"&&<section className="contact-card" id="contact-details" aria-labelledby="contact-details-h"><h2 id="contact-details-h" className="contact-card-title">{ar?"بيانات التواصل الرسمية":"Our official contact details"}</h2><p className="contact-card-note">{ar?"راسلنا على البريد الإلكتروني أو استخدم النموذج أدناه، وسنوجّهك إلى الفريق أو المنصة المناسبة.":"Email us or use the form below, and we will point you to the right team or platform."}</p><ContactInfo locale={locale} variant="page"/></section>}
  {slug==="contact"&&<ContactLeadForm locale={locale}/>}
  {slug==="ecosystem"&&<ConnectedJourney locale={locale}/>}
  {slug==="explore"&&<ExploreSearch locale={locale}/>}
