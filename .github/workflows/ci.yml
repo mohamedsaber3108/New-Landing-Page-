@@ -63,6 +63,46 @@ jobs:
       - name: npm audit (production deps, high and above)
         run: npm audit --omit=dev --audit-level=high
 
+  e2e:
+    name: e2e workflows (blocking)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci
+      - name: Install e2e tooling (not saved to package.json)
+        run: npm install --no-save --no-audit --no-fund @playwright/test@1.52.0 @axe-core/playwright@4.10.2
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Test D1 (all migrations, fresh local state)
+        run: node scripts/e2e-migrate.mjs
+      - name: CI-only admin token (random per run, masked, never committed)
+        run: |
+          token="$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          printf 'USAM_ADMIN_TOKEN=%s\n' "$token" > .dev.vars
+          echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Start server (npm start = wrangler dev --local, as in production)
+        run: |
+          npm start -- --port 3000 > server.log 2>&1 &
+          npx --yes wait-on@8.0.3 http://127.0.0.1:3000 --timeout 90000
+      - name: e2e workflows
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3000
+        run: npx playwright test --config e2e/playwright.config.mjs
+      - name: Server log on failure
+        if: failure()
+        run: tail -n 200 server.log
+      - name: Remove CI token file
+        if: always()
+        run: rm -f .dev.vars dist/server/.dev.vars
+
   axe:
     name: axe accessibility (report-only)
     runs-on: ubuntu-24.04
