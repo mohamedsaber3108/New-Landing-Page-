@@ -109,13 +109,13 @@ describe("rate limits", () => {
     expect((await leadsPOST(req("2.2.2.9"))).status).not.toBe(429);
   });
 
-  it("admin with no IP: only wrong tokens count, so the right token still works", () => {
+  it("admin with no IP: only wrong tokens count, so the right token still works", async () => {
     ENV.USAM_ADMIN_TOKEN = "t".repeat(40);
     try {
       const noIp = (token: string) => new Request("https://x.test/api/v1/admin/x", { headers: { "x-admin-token": token } });
-      for (let i = 0; i < 200; i++) expect(authorizeAdmin(noIp("t".repeat(40)), "r")).toBeNull();
-      for (let i = 0; i < RATE_LIMITS.admin.limit; i++) expect(authorizeAdmin(noIp("wrong"), "r")!.status).toBe(401);
-      expect(authorizeAdmin(noIp("wrong"), "r")!.status).toBe(429);
+      for (let i = 0; i < 200; i++) expect(await authorizeAdmin(noIp("t".repeat(40)), "r", "leads:view")).toBeNull();
+      for (let i = 0; i < RATE_LIMITS.admin.limit; i++) expect((await authorizeAdmin(noIp("wrong"), "r", "leads:view"))!.status).toBe(401);
+      expect((await authorizeAdmin(noIp("wrong"), "r", "leads:view"))!.status).toBe(429);
     } finally {
       delete ENV.USAM_ADMIN_TOKEN;
     }

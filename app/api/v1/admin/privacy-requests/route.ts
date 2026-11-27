@@ -8,6 +8,7 @@
 
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
 import { authorizeAdmin } from "@/lib/api/admin-auth";
+import { ROUTE_PERMISSIONS } from "@/lib/api/staff-permissions";
 import {
   listPrivacyRequests,
   updatePrivacyRequest,
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const requestId = newRequestId();
-  const denied = authorizeAdmin(request, requestId);
+  const denied = await authorizeAdmin(request, requestId, ROUTE_PERMISSIONS["GET /api/v1/admin/privacy-requests"]);
   if (denied) return denied;
 
   const url = new URL(request.url);
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   const requestId = newRequestId();
-  const denied = authorizeAdmin(request, requestId);
+  const denied = await authorizeAdmin(request, requestId, ROUTE_PERMISSIONS["PATCH /api/v1/admin/privacy-requests"]);
   if (denied) return denied;
 
   let raw: unknown;

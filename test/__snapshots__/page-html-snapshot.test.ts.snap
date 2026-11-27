@@ -1,0 +1,351 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`server HTML (ar) > /about 1`] = `
+{
+  "bytes": 33090,
+  "sha256": "ae8d202dd1b572086579c9ee43d5d285092e5c83841d317e5ecf7663f5f3d089",
+}
+`;
+
+exports[`server HTML (ar) > /ai-use 1`] = `
+{
+  "bytes": 33623,
+  "sha256": "1f3fb6d062849189755ebe104adaf0b2dc46fd910d294fbe8db805f00d63dfaa",
+}
+`;
+
+exports[`server HTML (ar) > /contact 1`] = `
+{
+  "bytes": 36278,
+  "sha256": "1001ce07697652284fbe59934a2b1bbae290362cd0ec3536551d2fa59f2d39eb",
+}
+`;
+
+exports[`server HTML (ar) > /cookies 1`] = `
+{
+  "bytes": 36350,
+  "sha256": "e1026e6fd6ad0709a9a782b620bd8a6ca60f84160cec535a65a52c83ad32a7a5",
+}
+`;
+
+exports[`server HTML (ar) > /ecosystem 1`] = `
+{
+  "bytes": 40331,
+  "sha256": "bef2714511d3fe6001b2a3295bab52956562d7259321dc5fb78b542e9f01a0ed",
+}
+`;
+
+exports[`server HTML (ar) > /explore 1`] = `
+{
+  "bytes": 32834,
+  "sha256": "e996f925f815499f858038093ec1c6e796b22490373b49229be0c74de664cd82",
+}
+`;
+
+exports[`server HTML (ar) > /faq 1`] = `
+{
+  "bytes": 32071,
+  "sha256": "bbeea892580f08830ec9c262321657714534ba60bd0ea0f2057d0f5afc9b77ba",
+}
+`;
+
+exports[`server HTML (ar) > /for-enterprises 1`] = `
+{
+  "bytes": 36182,
+  "sha256": "0933e9becf2a9f7440a1d8636c3c8d20c3f0ef3b27d67cf6a81a37f6fd40abec",
+}
+`;
+
+exports[`server HTML (ar) > /for-individuals 1`] = `
+{
+  "bytes": 33032,
+  "sha256": "81bbcab21614ed65ecbe1d2e06639ec6e6e1afb770c3ed405546049238de68b1",
+}
+`;
+
+exports[`server HTML (ar) > /for-talent 1`] = `
+{
+  "bytes": 32195,
+  "sha256": "8bcb4c90498aabd968155d8866e4f553f7ce0557ba25e3f89bb98d5a60cdb5ac",
+}
+`;
+
+exports[`server HTML (ar) > /government 1`] = `
+{
+  "bytes": 35887,
+  "sha256": "de3b06d2a2cbd04b0431dd11c412c7e0d4a2e0c8f6e6eed8a531911e1af04606",
+}
+`;
+
+exports[`server HTML (ar) > /guide 1`] = `
+{
+  "bytes": 32939,
+  "sha256": "af13c2f0eabc7dde724e733d541a75fd534a9af3ebc4a81571e643d0b3b53b4f",
+}
+`;
+
+exports[`server HTML (ar) > /how-it-works 1`] = `
+{
+  "bytes": 33072,
+  "sha256": "70351b5587356a185531dd34ebb59b5175c2bbf3a6bd43c6f5a74b401088214e",
+}
+`;
+
+exports[`server HTML (ar) > /kids 1`] = `
+{
+  "bytes": 32022,
+  "sha256": "e91ab368ddf0e1cb52fbf6b93cb4fec1b96fd5a5dbe77cbf8ec9057bdd1478ed",
+}
+`;
+
+exports[`server HTML (ar) > /legal 1`] = `
+{
+  "bytes": 34930,
+  "sha256": "bea3212abfee29c27073c7e76cc43689f3a039a9d12f28383da037270185e7d6",
+}
+`;
+
+exports[`server HTML (ar) > /payments 1`] = `
+{
+  "bytes": 36706,
+  "sha256": "441869715589c9149b38100042a9d7bad64e097b28c187c86e84ef621ef2f6f4",
+}
+`;
+
+exports[`server HTML (ar) > /pricing 1`] = `
+{
+  "bytes": 33478,
+  "sha256": "9a2ae34ce3c231494a57630e20010cce7ee5c1f1bf092d44a13db6ef8f60ff60",
+}
+`;
+
+exports[`server HTML (ar) > /privacy 1`] = `
+{
+  "bytes": 39617,
+  "sha256": "cbea04771e3d26bcb30c65966905e487337441821bcd46e6f974e37dcae39c84",
+}
+`;
+
+exports[`server HTML (ar) > /privacy-requests 1`] = `
+{
+  "bytes": 35596,
+  "sha256": "16e6813ae7723f58ef7aa038e5cc0aad24c2655636ec6afa644aaa621e8a4b14",
+}
+`;
+
+exports[`server HTML (ar) > /refunds 1`] = `
+{
+  "bytes": 34433,
+  "sha256": "8aaf27b3e2a30db6fd6c347c40074fa0ebfc8a1c616c489889a5e36178d292db",
+}
+`;
+
+exports[`server HTML (ar) > /sitemap 1`] = `
+{
+  "bytes": 32961,
+  "sha256": "992e100482f5ec6c14d0b0b736f13c4ca0adb4098ffbdc6ad970687d9941a183",
+}
+`;
+
+exports[`server HTML (ar) > /status 1`] = `
+{
+  "bytes": 32764,
+  "sha256": "7f076740b73f68281e4f5897b734f8343b94d4a57021dcc3e217220f0cbdb7fb",
+}
+`;
+
+exports[`server HTML (ar) > /terms 1`] = `
+{
+  "bytes": 34638,
+  "sha256": "10974e13d230c8e58b08748d9a57e7eb2495d8d677f9db20a9fced21d52907fc",
+}
+`;
+
+exports[`server HTML (ar) > /trust 1`] = `
+{
+  "bytes": 33109,
+  "sha256": "88ef3eee4f1f8ba375bd57ce4ada11ca23a8d30e4242667f824b2af0a2ba47f0",
+}
+`;
+
+exports[`server HTML (ar) > home 1`] = `
+{
+  "bytes": 70149,
+  "sha256": "d05cc0446fffe28f31c495c470e183a7499a6941845e774a4d1a2d69650a2ff4",
+}
+`;
+
+exports[`server HTML (en) > /about 1`] = `
+{
+  "bytes": 33441,
+  "sha256": "72b29e5ace6bb4ac232a70d8bd466dc5225c1dd8379613336e088516fe537427",
+}
+`;
+
+exports[`server HTML (en) > /ai-use 1`] = `
+{
+  "bytes": 34067,
+  "sha256": "195f8f5c16750784470db29538b5255f2c61f4b007261f3396b1ef9e1751bcd7",
+}
+`;
+
+exports[`server HTML (en) > /contact 1`] = `
+{
+  "bytes": 36702,
+  "sha256": "34f086582e2689b5d5afd019d6b5ab85b5316cbd8d8b049fdc5ecc615f531b6f",
+}
+`;
+
+exports[`server HTML (en) > /cookies 1`] = `
+{
+  "bytes": 36969,
+  "sha256": "075b18476837218139b67f4386d24d97773f3b9a5e02805a6cc15a285f3a664d",
+}
+`;
+
+exports[`server HTML (en) > /ecosystem 1`] = `
+{
+  "bytes": 40783,
+  "sha256": "00820489a69ef32e3f3e5a492ec322e78b97f9ed4870f31b367b310bb1ddd58a",
+}
+`;
+
+exports[`server HTML (en) > /explore 1`] = `
+{
+  "bytes": 33102,
+  "sha256": "66a984904f9eeeed6a11988150c31ee0e2cba6b7f6d52122c8b4a48b67ff7c3d",
+}
+`;
+
+exports[`server HTML (en) > /faq 1`] = `
+{
+  "bytes": 32426,
+  "sha256": "71ca3cf5f53a43842e324c1dcc4716f41751997b6a04dd6bfde2e8fe95553a9f",
+}
+`;
+
+exports[`server HTML (en) > /for-enterprises 1`] = `
+{
+  "bytes": 36602,
+  "sha256": "500b68c4ee85ec6b1487f2f66039dd9f1efca595fecf151eaab7a4d46a369225",
+}
+`;
+
+exports[`server HTML (en) > /for-individuals 1`] = `
+{
+  "bytes": 33365,
+  "sha256": "2c52c8e8d44731e65e760e47447ab0090a0864540f4979a7f795fb7d31632679",
+}
+`;
+
+exports[`server HTML (en) > /for-talent 1`] = `
+{
+  "bytes": 32488,
+  "sha256": "e8633ddc9494d6e8ae5cae5c65f55ebaf8684db4036f244487323cac17cf63fb",
+}
+`;
+
+exports[`server HTML (en) > /government 1`] = `
+{
+  "bytes": 36399,
+  "sha256": "252ebaa30511f6eae62e181a433243b75c6980d138fbfa8aea212c319f71f0f6",
+}
+`;
+
+exports[`server HTML (en) > /guide 1`] = `
+{
+  "bytes": 33318,
+  "sha256": "35af4a5e331ec85368b2e5a5856e6208ed0f36c631088857901b03b9c656e291",
+}
+`;
+
+exports[`server HTML (en) > /how-it-works 1`] = `
+{
+  "bytes": 33438,
+  "sha256": "fb08aa7fff5f06834106cf3fc114f4d6b0c097bcf0f4a67786b4fe06b01bf23d",
+}
+`;
+
+exports[`server HTML (en) > /kids 1`] = `
+{
+  "bytes": 32299,
+  "sha256": "ed3138cda5ae405ad93080eb0708783a4358298c9674a13b2c5b9d54830226de",
+}
+`;
+
+exports[`server HTML (en) > /legal 1`] = `
+{
+  "bytes": 35352,
+  "sha256": "3c9de0c433c4e89f1c3f562b444e625d373ec1d293d154c8acb9a0133ff42314",
+}
+`;
+
+exports[`server HTML (en) > /payments 1`] = `
+{
+  "bytes": 37584,
+  "sha256": "46992dc91226c5919249403d10878340fc6ee74aceb65f7b7ee5c8fa4525720c",
+}
+`;
+
+exports[`server HTML (en) > /pricing 1`] = `
+{
+  "bytes": 33997,
+  "sha256": "92dd9c3937578c2126dbabed747539f952febaac5bc7682a7041f66fab91b20c",
+}
+`;
+
+exports[`server HTML (en) > /privacy 1`] = `
+{
+  "bytes": 41205,
+  "sha256": "0e8a6116fdb0cc321ee884c64a6af67142c0cef83222e7b9a2c66bc11c912567",
+}
+`;
+
+exports[`server HTML (en) > /privacy-requests 1`] = `
+{
+  "bytes": 36292,
+  "sha256": "ca0d86d2353d2cdc7b228f1f7df30b55a65bc3ff57b7a7a609e6c001257d9359",
+}
+`;
+
+exports[`server HTML (en) > /refunds 1`] = `
+{
+  "bytes": 35239,
+  "sha256": "d7f20a3b0a7d5639e143aba51da6a83349d5f99a641cf3745785e1a3385ebfa7",
+}
+`;
+
+exports[`server HTML (en) > /sitemap 1`] = `
+{
+  "bytes": 33186,
+  "sha256": "0e153f235f7a76c8431b7258bec6c706b3ce96bf2f55d7282cca0d8c4acbe65e",
+}
+`;
+
+exports[`server HTML (en) > /status 1`] = `
+{
+  "bytes": 33079,
+  "sha256": "b4a765f17ca45fc031098db999fbe78bfb954b22642e7e35b0c925ebc0f5d441",
+}
+`;
+
+exports[`server HTML (en) > /terms 1`] = `
+{
+  "bytes": 35326,
+  "sha256": "39c24c4342e9177fc5fd603f1e97213c76756c0240c8b67ab0b667225372bda7",
+}
+`;
+
+exports[`server HTML (en) > /trust 1`] = `
+{
+  "bytes": 33434,
+  "sha256": "073861bfd387e487205cb70e11cdd37c7647d94b7aeb046887bede53942e43f4",
+}
+`;
+
+exports[`server HTML (en) > home 1`] = `
+{
+  "bytes": 71574,
+  "sha256": "992424b37202cc5b4404ea9bfab9b0e42a77dc865d390fff0bd10f5f64d798a4",
+}
+`;
