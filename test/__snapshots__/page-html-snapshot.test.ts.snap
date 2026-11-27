@@ -2,350 +2,350 @@
 
 exports[`server HTML (ar) > /about 1`] = `
 {
-  "bytes": 33090,
-  "sha256": "ae8d202dd1b572086579c9ee43d5d285092e5c83841d317e5ecf7663f5f3d089",
+  "bytes": 33775,
+  "sha256": "cc26a693d97c168e86fdb03a5dd2484e8c50d17475eb6c56c0a14076bf0ffc91",
 }
 `;
 
 exports[`server HTML (ar) > /ai-use 1`] = `
 {
-  "bytes": 33623,
-  "sha256": "1f3fb6d062849189755ebe104adaf0b2dc46fd910d294fbe8db805f00d63dfaa",
+  "bytes": 34308,
+  "sha256": "bd1de5d6b5eb6d09b09abfa7d45f826b93356bf42bf6b02c09b4b25a1e6adcd3",
 }
 `;
 
 exports[`server HTML (ar) > /contact 1`] = `
 {
-  "bytes": 36278,
-  "sha256": "1001ce07697652284fbe59934a2b1bbae290362cd0ec3536551d2fa59f2d39eb",
+  "bytes": 36963,
+  "sha256": "b9e6b4fb1155bbf47788f055af5c19880e3f0dd90fea17bdb2b92283bc8792c3",
 }
 `;
 
 exports[`server HTML (ar) > /cookies 1`] = `
 {
-  "bytes": 36350,
-  "sha256": "e1026e6fd6ad0709a9a782b620bd8a6ca60f84160cec535a65a52c83ad32a7a5",
+  "bytes": 37035,
+  "sha256": "9dae8653f19cc1b428ef605aa0e0f3be91a79c6c10744f3871e501db94e563cc",
 }
 `;
 
 exports[`server HTML (ar) > /ecosystem 1`] = `
 {
-  "bytes": 40331,
-  "sha256": "bef2714511d3fe6001b2a3295bab52956562d7259321dc5fb78b542e9f01a0ed",
+  "bytes": 41016,
+  "sha256": "448cda2ff3a011358bc9c38669c3f2830fd189cc078fa8536245325576fb9e28",
 }
 `;
 
 exports[`server HTML (ar) > /explore 1`] = `
 {
-  "bytes": 32834,
-  "sha256": "e996f925f815499f858038093ec1c6e796b22490373b49229be0c74de664cd82",
+  "bytes": 33519,
+  "sha256": "071a1b4911d7743018d30c444aa592e74ac5dec3c5cfb50c5d7bc2e4cfc5f7f1",
 }
 `;
 
 exports[`server HTML (ar) > /faq 1`] = `
 {
-  "bytes": 32071,
-  "sha256": "bbeea892580f08830ec9c262321657714534ba60bd0ea0f2057d0f5afc9b77ba",
+  "bytes": 32756,
+  "sha256": "e15d6b2ce530762b7039f5c2270dfad84c934db69a7df4a97377c71d80f0f40c",
 }
 `;
 
 exports[`server HTML (ar) > /for-enterprises 1`] = `
 {
-  "bytes": 36182,
-  "sha256": "0933e9becf2a9f7440a1d8636c3c8d20c3f0ef3b27d67cf6a81a37f6fd40abec",
+  "bytes": 36867,
+  "sha256": "52532cb88d930b030fc333f68072655ff965f0d6d0cfe9d2929521068937f7b9",
 }
 `;
 
 exports[`server HTML (ar) > /for-individuals 1`] = `
 {
-  "bytes": 33032,
-  "sha256": "81bbcab21614ed65ecbe1d2e06639ec6e6e1afb770c3ed405546049238de68b1",
+  "bytes": 33717,
+  "sha256": "02f76cae0986b902b9526358247c4b2a261ec70efc17f601adfbffb8964bf297",
 }
 `;
 
 exports[`server HTML (ar) > /for-talent 1`] = `
 {
-  "bytes": 32195,
-  "sha256": "8bcb4c90498aabd968155d8866e4f553f7ce0557ba25e3f89bb98d5a60cdb5ac",
+  "bytes": 32880,
+  "sha256": "79502dd91466b4a66c37504bd7f3f7bf8ac64ba47003835f5b94fd6e9586a60d",
 }
 `;
 
 exports[`server HTML (ar) > /government 1`] = `
 {
-  "bytes": 35887,
-  "sha256": "de3b06d2a2cbd04b0431dd11c412c7e0d4a2e0c8f6e6eed8a531911e1af04606",
+  "bytes": 36572,
+  "sha256": "deadfffebcc0e652bf8234136bb5eff61c5c1b1eb09a1f6576d9c35adf3b713f",
 }
 `;
 
 exports[`server HTML (ar) > /guide 1`] = `
 {
-  "bytes": 32939,
-  "sha256": "af13c2f0eabc7dde724e733d541a75fd534a9af3ebc4a81571e643d0b3b53b4f",
+  "bytes": 33624,
+  "sha256": "3d434116425bd5e9bc6cac422dccb00ef99f5851eb46b19c72f6a26311c516fe",
 }
 `;
 
 exports[`server HTML (ar) > /how-it-works 1`] = `
 {
-  "bytes": 33072,
-  "sha256": "70351b5587356a185531dd34ebb59b5175c2bbf3a6bd43c6f5a74b401088214e",
+  "bytes": 33757,
+  "sha256": "0a1091c4867d0409aded21121a5fe34287aeeb4c4910f51c34137f8146a53b5d",
 }
 `;
 
 exports[`server HTML (ar) > /kids 1`] = `
 {
-  "bytes": 32022,
-  "sha256": "e91ab368ddf0e1cb52fbf6b93cb4fec1b96fd5a5dbe77cbf8ec9057bdd1478ed",
+  "bytes": 32707,
+  "sha256": "c585f42a01785d7138be85b743c650baafa57fe88fa0068d9eb928a26497a5c1",
 }
 `;
 
 exports[`server HTML (ar) > /legal 1`] = `
 {
-  "bytes": 34930,
-  "sha256": "bea3212abfee29c27073c7e76cc43689f3a039a9d12f28383da037270185e7d6",
+  "bytes": 35615,
+  "sha256": "5babc41f9352989fed0ac3a200fc0738f8b5b647a271380d011e4bb244cffb55",
 }
 `;
 
 exports[`server HTML (ar) > /payments 1`] = `
 {
-  "bytes": 36706,
-  "sha256": "441869715589c9149b38100042a9d7bad64e097b28c187c86e84ef621ef2f6f4",
+  "bytes": 37391,
+  "sha256": "72830ce2f83c097b71f7ea893115a0503cfdb62cf627bc14056ea1650ea11fa1",
 }
 `;
 
 exports[`server HTML (ar) > /pricing 1`] = `
 {
-  "bytes": 33478,
-  "sha256": "9a2ae34ce3c231494a57630e20010cce7ee5c1f1bf092d44a13db6ef8f60ff60",
+  "bytes": 34163,
+  "sha256": "ca7ff5efa16c8d384b5eb026848e3601020877bfc7e8c10f35e60510c7c29124",
 }
 `;
 
 exports[`server HTML (ar) > /privacy 1`] = `
 {
-  "bytes": 39617,
-  "sha256": "cbea04771e3d26bcb30c65966905e487337441821bcd46e6f974e37dcae39c84",
+  "bytes": 40302,
+  "sha256": "60234a20eb5a902765b14681ca7c542fe1f2c25b9d7461f09277d2efd9840c84",
 }
 `;
 
 exports[`server HTML (ar) > /privacy-requests 1`] = `
 {
-  "bytes": 35596,
-  "sha256": "16e6813ae7723f58ef7aa038e5cc0aad24c2655636ec6afa644aaa621e8a4b14",
+  "bytes": 36281,
+  "sha256": "b81bd381f75cbb128f4f4843ff0dafb9f2986cdb6327e4031e008609f6018489",
 }
 `;
 
 exports[`server HTML (ar) > /refunds 1`] = `
 {
-  "bytes": 34433,
-  "sha256": "8aaf27b3e2a30db6fd6c347c40074fa0ebfc8a1c616c489889a5e36178d292db",
+  "bytes": 35118,
+  "sha256": "a14fb583355f80a0b03c365f819000b99b35665f8e448fe7e0e73b0e5ff3b09c",
 }
 `;
 
 exports[`server HTML (ar) > /sitemap 1`] = `
 {
-  "bytes": 32961,
-  "sha256": "992e100482f5ec6c14d0b0b736f13c4ca0adb4098ffbdc6ad970687d9941a183",
+  "bytes": 33646,
+  "sha256": "2580abf0b5cac09b99b9ff4d8a73306057bccb1941ae608522c40cbc5bdbeb47",
 }
 `;
 
 exports[`server HTML (ar) > /status 1`] = `
 {
-  "bytes": 32764,
-  "sha256": "7f076740b73f68281e4f5897b734f8343b94d4a57021dcc3e217220f0cbdb7fb",
+  "bytes": 33449,
+  "sha256": "abffcdb544382aa9e99cd256f8820b71927f02fc753c1bc04eab932f03d6cf7d",
 }
 `;
 
 exports[`server HTML (ar) > /terms 1`] = `
 {
-  "bytes": 34638,
-  "sha256": "10974e13d230c8e58b08748d9a57e7eb2495d8d677f9db20a9fced21d52907fc",
+  "bytes": 35323,
+  "sha256": "df8a679cc9740e425e485c7a2ccbbcaf8de8b60d5bdbd247ee9244b065d1df3a",
 }
 `;
 
 exports[`server HTML (ar) > /trust 1`] = `
 {
-  "bytes": 33109,
-  "sha256": "88ef3eee4f1f8ba375bd57ce4ada11ca23a8d30e4242667f824b2af0a2ba47f0",
+  "bytes": 33794,
+  "sha256": "e135dfd8db6e12e04f7d0d1a84140363fa1c616348a332b8da924179096a4e7d",
 }
 `;
 
 exports[`server HTML (ar) > home 1`] = `
 {
-  "bytes": 70149,
-  "sha256": "d05cc0446fffe28f31c495c470e183a7499a6941845e774a4d1a2d69650a2ff4",
+  "bytes": 70834,
+  "sha256": "f2dc4cfd7a8c3b9475c99807abe75ce8ada2f98cf3b5e92f2ff9ff3e7f466822",
 }
 `;
 
 exports[`server HTML (en) > /about 1`] = `
 {
-  "bytes": 33441,
-  "sha256": "72b29e5ace6bb4ac232a70d8bd466dc5225c1dd8379613336e088516fe537427",
+  "bytes": 34112,
+  "sha256": "4ab27b490497eec09ee0c47f84b0a5c6e28f0ac8fb1e23f1a5ffb2a02904270e",
 }
 `;
 
 exports[`server HTML (en) > /ai-use 1`] = `
 {
-  "bytes": 34067,
-  "sha256": "195f8f5c16750784470db29538b5255f2c61f4b007261f3396b1ef9e1751bcd7",
+  "bytes": 34738,
+  "sha256": "5d4dc830a19e9416c5b8f5b3476d9238e296633c908b39d7a48b3094acf63c3b",
 }
 `;
 
 exports[`server HTML (en) > /contact 1`] = `
 {
-  "bytes": 36702,
-  "sha256": "34f086582e2689b5d5afd019d6b5ab85b5316cbd8d8b049fdc5ecc615f531b6f",
+  "bytes": 37373,
+  "sha256": "3fa70a1438b47194c566397ec1babdb1c1a4b7efde142091833fe6de47333257",
 }
 `;
 
 exports[`server HTML (en) > /cookies 1`] = `
 {
-  "bytes": 36969,
-  "sha256": "075b18476837218139b67f4386d24d97773f3b9a5e02805a6cc15a285f3a664d",
+  "bytes": 37640,
+  "sha256": "d76e95355a11feb8de82344e077ea51a7f4f16ddcae9c66e78ec8e0c65c0f793",
 }
 `;
 
 exports[`server HTML (en) > /ecosystem 1`] = `
 {
-  "bytes": 40783,
-  "sha256": "00820489a69ef32e3f3e5a492ec322e78b97f9ed4870f31b367b310bb1ddd58a",
+  "bytes": 41454,
+  "sha256": "62eb784bc4068303874570a76453abde23eaa6f8f99af8aa7f2d89cf767f1b92",
 }
 `;
 
 exports[`server HTML (en) > /explore 1`] = `
 {
-  "bytes": 33102,
-  "sha256": "66a984904f9eeeed6a11988150c31ee0e2cba6b7f6d52122c8b4a48b67ff7c3d",
+  "bytes": 33773,
+  "sha256": "48144ffb89461258c9b37dcf7b70fb1107501eb799d2d7cf3fbf133f1f98701b",
 }
 `;
 
 exports[`server HTML (en) > /faq 1`] = `
 {
-  "bytes": 32426,
-  "sha256": "71ca3cf5f53a43842e324c1dcc4716f41751997b6a04dd6bfde2e8fe95553a9f",
+  "bytes": 33097,
+  "sha256": "04b6c0b013c2dec155cb718ad73e31b0aabd87515e58eb33331bf4acc80f931c",
 }
 `;
 
 exports[`server HTML (en) > /for-enterprises 1`] = `
 {
-  "bytes": 36602,
-  "sha256": "500b68c4ee85ec6b1487f2f66039dd9f1efca595fecf151eaab7a4d46a369225",
+  "bytes": 37273,
+  "sha256": "65fb1f7e0991c6057104312eb7f6375252c49dabf641734e4e8d09186b887afd",
 }
 `;
 
 exports[`server HTML (en) > /for-individuals 1`] = `
 {
-  "bytes": 33365,
-  "sha256": "2c52c8e8d44731e65e760e47447ab0090a0864540f4979a7f795fb7d31632679",
+  "bytes": 34036,
+  "sha256": "eaf40b1168c4e9e0d622e7778a710a9deb8880a9c5e44c100903015de1e59218",
 }
 `;
 
 exports[`server HTML (en) > /for-talent 1`] = `
 {
-  "bytes": 32488,
-  "sha256": "e8633ddc9494d6e8ae5cae5c65f55ebaf8684db4036f244487323cac17cf63fb",
+  "bytes": 33159,
+  "sha256": "ea2523767b8b1e2f1c9b4c5d87cdd3c51ab2c297306180b68b5818ea106d2d0c",
 }
 `;
 
 exports[`server HTML (en) > /government 1`] = `
 {
-  "bytes": 36399,
-  "sha256": "252ebaa30511f6eae62e181a433243b75c6980d138fbfa8aea212c319f71f0f6",
+  "bytes": 37070,
+  "sha256": "6b5da21e35fff2dfe4e62056134b6f805341f8cf4558140d0876647457e635e8",
 }
 `;
 
 exports[`server HTML (en) > /guide 1`] = `
 {
-  "bytes": 33318,
-  "sha256": "35af4a5e331ec85368b2e5a5856e6208ed0f36c631088857901b03b9c656e291",
+  "bytes": 33989,
+  "sha256": "033b5fed90e6c2a67a27fbed6e7a1ad966c8f5a9dbd5ea54ed24054886622d94",
 }
 `;
 
 exports[`server HTML (en) > /how-it-works 1`] = `
 {
-  "bytes": 33438,
-  "sha256": "fb08aa7fff5f06834106cf3fc114f4d6b0c097bcf0f4a67786b4fe06b01bf23d",
+  "bytes": 34109,
+  "sha256": "f84d909d22781ddad481ee9a76c44a56e33dcb7155a635d7b16d659772228fdf",
 }
 `;
 
 exports[`server HTML (en) > /kids 1`] = `
 {
-  "bytes": 32299,
-  "sha256": "ed3138cda5ae405ad93080eb0708783a4358298c9674a13b2c5b9d54830226de",
+  "bytes": 32970,
+  "sha256": "f7c22e21502fbf0956238026af55fa364d4fe876cb3d13354fa8d33999507286",
 }
 `;
 
 exports[`server HTML (en) > /legal 1`] = `
 {
-  "bytes": 35352,
-  "sha256": "3c9de0c433c4e89f1c3f562b444e625d373ec1d293d154c8acb9a0133ff42314",
+  "bytes": 36023,
+  "sha256": "8eb1852a55c24eedd6440048ca8735748dfa32ffe79f69a3568a5b94c27eb69c",
 }
 `;
 
 exports[`server HTML (en) > /payments 1`] = `
 {
-  "bytes": 37584,
-  "sha256": "46992dc91226c5919249403d10878340fc6ee74aceb65f7b7ee5c8fa4525720c",
+  "bytes": 38255,
+  "sha256": "42f4dac49e3c5c31a9ddf1067e87b915e4cdb789fc5e13943cd322a545558232",
 }
 `;
 
 exports[`server HTML (en) > /pricing 1`] = `
 {
-  "bytes": 33997,
-  "sha256": "92dd9c3937578c2126dbabed747539f952febaac5bc7682a7041f66fab91b20c",
+  "bytes": 34668,
+  "sha256": "9f9bbbcd149a8fd2741818bef50031063cf060b67e8e3b89a83fbf4636f37d2d",
 }
 `;
 
 exports[`server HTML (en) > /privacy 1`] = `
 {
-  "bytes": 41205,
-  "sha256": "0e8a6116fdb0cc321ee884c64a6af67142c0cef83222e7b9a2c66bc11c912567",
+  "bytes": 41876,
+  "sha256": "0624e338fb7f218a33bda84f9546d99b4cdf2060958d3034b510e557dee8ad3b",
 }
 `;
 
 exports[`server HTML (en) > /privacy-requests 1`] = `
 {
-  "bytes": 36292,
-  "sha256": "ca0d86d2353d2cdc7b228f1f7df30b55a65bc3ff57b7a7a609e6c001257d9359",
+  "bytes": 36963,
+  "sha256": "91db318d77c53dac22c1fa9d64b6be5e0b934a4adeac4369333c49bddcbce32d",
 }
 `;
 
 exports[`server HTML (en) > /refunds 1`] = `
 {
-  "bytes": 35239,
-  "sha256": "d7f20a3b0a7d5639e143aba51da6a83349d5f99a641cf3745785e1a3385ebfa7",
+  "bytes": 35910,
+  "sha256": "c1172725d830bf9f7af459697aacc557802bd6452586f20f630c1b8cefa67b5a",
 }
 `;
 
 exports[`server HTML (en) > /sitemap 1`] = `
 {
-  "bytes": 33186,
-  "sha256": "0e153f235f7a76c8431b7258bec6c706b3ce96bf2f55d7282cca0d8c4acbe65e",
+  "bytes": 33857,
+  "sha256": "4ac99235708c074cc0f49b98b9f96f788021cbbebb733398949585bdfbaf4291",
 }
 `;
 
 exports[`server HTML (en) > /status 1`] = `
 {
-  "bytes": 33079,
-  "sha256": "b4a765f17ca45fc031098db999fbe78bfb954b22642e7e35b0c925ebc0f5d441",
+  "bytes": 33750,
+  "sha256": "f7cbea65c3f48f52851c14fe09679b3cc1006fe1f42b719cf20e3d7737953663",
 }
 `;
 
 exports[`server HTML (en) > /terms 1`] = `
 {
-  "bytes": 35326,
-  "sha256": "39c24c4342e9177fc5fd603f1e97213c76756c0240c8b67ab0b667225372bda7",
+  "bytes": 35997,
+  "sha256": "eb3b465471e5891efe12b0741ef052a5b41adbd41be68f53ddbd0b6ec1b9920a",
 }
 `;
 
 exports[`server HTML (en) > /trust 1`] = `
 {
-  "bytes": 33434,
-  "sha256": "073861bfd387e487205cb70e11cdd37c7647d94b7aeb046887bede53942e43f4",
+  "bytes": 34105,
+  "sha256": "981602b24cc760d8ad54ea3e3a171624ea39b30d4cc5a10e1900ff665315116e",
 }
 `;
 
 exports[`server HTML (en) > home 1`] = `
 {
-  "bytes": 71574,
-  "sha256": "992424b37202cc5b4404ea9bfab9b0e42a77dc865d390fff0bd10f5f64d798a4",
+  "bytes": 72245,
+  "sha256": "ca1f5b21e0aa974bd56abbd3ba4ac73e7e0b469b53d7477c410a6687164827e8",
 }
 `;
