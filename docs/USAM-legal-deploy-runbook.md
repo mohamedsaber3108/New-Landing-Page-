@@ -180,9 +180,12 @@ exact pre-deploy state.
 ## Notes
 
 - **Enabling staff features:** the admin endpoints stay 403 until
-  `USAM_ADMIN_TOKEN` is set in the service environment. Set it via a systemd
-  drop-in (`sudo systemctl edit usam` → `[Service]` `Environment=USAM_ADMIN_TOKEN=...`)
-  and `sudo systemctl restart usam`. Never put the token in the repo or a URL.
+  `USAM_ADMIN_TOKEN` is set. Put it as a `USAM_ADMIN_TOKEN=...` line in the
+  secrets file `~/.usam/dev.vars` (mode 600, outside the repo; names are in
+  `.env.example`). Then run `sudo systemctl restart usam`: the `prestart` hook
+  (`scripts/stage-dev-vars.mjs`) copies it to `dist/server/.dev.vars` for
+  Miniflare. A systemd `Environment=` line does **not** work, because Miniflare
+  does not read the service environment. Never put the token in the repo or a URL.
 - **Notifications remain unconfigured:** `lead.created` and
   `privacy_request.created` outbox events stay `pending` until
   `USAM_LEAD_NOTIFY_WEBHOOK`/`USAM_LEAD_NOTIFY_EMAIL` is set. Delivery has **not**

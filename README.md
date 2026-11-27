@@ -64,7 +64,7 @@ service `usam`, behind nginx. Full steps, backup and rollback are in
    stages them into `dist/server/.dev.vars`. Miniflare does not read the
    systemd environment, so a systemd `Environment=` line is not enough.
 5. nginx must send `proxy_set_header X-Real-IP $remote_addr;` (used by the
-   rate limits from PR #4).
+   rate limits, PR #7).
 
 ---
 
@@ -123,7 +123,7 @@ integrations produce a `not_configured` / disabled state and never fake success.
 | `USAM_LEAD_NOTIFY_WEBHOOK` | Optional. Enables webhook delivery of lead-notification outbox events. |
 | `USAM_LEAD_NOTIFY_EMAIL` | Optional. Marks an email channel (provider wiring is a gated task). |
 | `USAM_SITE_URL` | Optional. Public origin for sitemap/robots; default `https://usamif.com`. |
-| `USAM_TRUST_CF_CONNECTING_IP` | Optional, lands with PR #4. `1` = trust `CF-Connecting-IP` as client IP; only if the origin accepts Cloudflare traffic alone. |
+| `USAM_TRUST_CF_CONNECTING_IP` | Optional, lands with the rate limits (PR #7). `1` = trust `CF-Connecting-IP` as client IP; only if the origin accepts Cloudflare traffic alone. |
 | `USAM_DEV_VARS_FILE` | Optional, launcher only. Path of the secrets file to stage instead of the defaults. |
 
 The database is the D1 binding `DB` (`.openai/hosting.json`), not a variable.
