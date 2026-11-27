@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { content_feedback } from "@/db/schema";
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
+import { rateLimit } from "@/lib/api/rate-limit";
 import { knownContentIds } from "@/lib/api/content";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,8 @@ const feedbackSchema = z
 
 export async function POST(request: Request) {
   const requestId = newRequestId();
+  const limited = rateLimit(request, "feedback", requestId);
+  if (limited) return limited;
 
   let raw: unknown;
   try {

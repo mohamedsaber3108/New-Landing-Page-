@@ -103,6 +103,7 @@ export function ContactLeadForm({ locale }: { locale: Locale }) {
         headers: {
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey.current,
+          "X-USAM-Locale": locale,
         },
         body: JSON.stringify(payload),
       });
