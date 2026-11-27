@@ -172,8 +172,19 @@ function routeFiles(dir: string): string[] {
 
 // The staff sign-in routes (L-A1a) are the way IN, so they cannot require an
 // existing session or token. They are listed here by name only and are tested
-// in test/staff-auth.test.ts. Any other route must pass the scan below.
-const AUTH_ROUTES = ["auth/login", "auth/logout", "auth/me"];
+// in test/staff-auth.test.ts. The MFA routes (L-A1b) check the session stage
+// themselves and are tested in test/staff-mfa.test.ts. Any other route must
+// pass the scan below.
+const AUTH_ROUTES = [
+  "auth/login",
+  "auth/login/mfa",
+  "auth/logout",
+  "auth/me",
+  "auth/mfa/backup-codes",
+  "auth/mfa/setup",
+  "auth/mfa/step-up",
+  "auth/mfa/verify",
+];
 
 describe("admin folder scan", () => {
   const all = routeFiles(ADMIN_DIR);

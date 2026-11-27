@@ -14,15 +14,16 @@ import type { Db } from "./idempotency";
 import { clientIp, rateLimit } from "./rate-limit";
 import { DUMMY_HASH, verifyPassphrase } from "./staff-password";
 import { accountLocked, clearAccountFailures, pairLocked, recordAccountFailure, recordPairFailure } from "./staff-lockout";
-import { ROLE_PERMISSIONS, type StaffRole } from "./staff-permissions";
+import { ROLE_PERMISSIONS, mfaRequired, type StaffRole } from "./staff-permissions";
 import {
-  SESSION_ABSOLUTE_MS,
   clearSessionCookie,
   createSession,
   getSession,
   originAllowed,
   revokeSession,
   sessionCookie,
+  stageLifetimeMs,
+  type SessionStage,
 } from "./staff-session";
 
 
@@ -34,7 +35,7 @@ const loginSchema = z.object({
 const db = () => getDb() as unknown as Db;
 const BAD_LOGIN = "Email or passphrase is not correct.";
 
-function publicUser(user: StaffUser) {
+export function publicUser(user: StaffUser) {
   return {
     email: user.email,
     displayName: user.displayName,
@@ -79,12 +80,19 @@ export async function login(request: Request, requestId: string): Promise<Respon
       return fail({ code: "unauthenticated", message: BAD_LOGIN, requestId });
     }
 
-    await clearAccountFailures(db(), user.id);
-    const token = await createSession(user, request, ip);
-    return ok(
-      { user: publicUser(user) },
-      { requestId, headers: { "Set-Cookie": sessionCookie(token, SESSION_ABSOLUTE_MS / 1000), "Cache-Control": "no-store" } },
-    );
+    // L-A1b: with MFA on, the passphrase only opens a 5-minute "mfa_pending"
+    // step; the real session is created by auth/login/mfa after the code.
+    // A role that must use MFA but has not set it up gets an "enrol_only"
+    // session that can do nothing but auth/mfa/setup and auth/mfa/verify.
+    const stage: SessionStage = user.mfaEnabledAt ? "mfa_pending" : mfaRequired(user.role) ? "enrol_only" : "full";
+    // The account backstop is cleared only after the whole sign-in succeeds.
+    if (stage !== "mfa_pending") await clearAccountFailures(db(), user.id);
+    const token = await createSession(user, request, ip, { stage });
+    const data = stage === "mfa_pending" ? { mfaRequired: true } : { user: publicUser(user), mfaSetupRequired: stage === "enrol_only" };
+    return ok(data, {
+      requestId,
+      headers: { "Set-Cookie": sessionCookie(token, stageLifetimeMs(stage) / 1000), "Cache-Control": "no-store" },
+    });
   } catch {
     return fail({ code: "dependency_unavailable", message: "Staff account store is unavailable.", requestId });
   }
@@ -108,6 +116,11 @@ export async function me(request: Request, requestId: string): Promise<Response>
   } catch {
     return fail({ code: "dependency_unavailable", message: "Staff session store is unavailable.", requestId });
   }
-  if (!session) return fail({ code: "unauthenticated", message: "Not signed in.", requestId });
-  return ok({ user: publicUser(session.user) }, { requestId, headers: { "Cache-Control": "no-store" } });
+  if (!session || session.stage === "mfa_pending") return fail({ code: "unauthenticated", message: "Not signed in.", requestId });
+  const enabled = Boolean(session.user.mfaEnabledAt);
+  const required = mfaRequired(session.user.role);
+  return ok(
+    { user: publicUser(session.user), mfa: { enabled, required, setupRequired: session.stage === "enrol_only" || (required && !enabled) } },
+    { requestId, headers: { "Cache-Control": "no-store" } },
+  );
 }

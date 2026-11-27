@@ -508,8 +508,29 @@ export const staffUsers = sqliteTable(
     disabledAt: text("disabled_at"),
     failedCount: integer("failed_count").notNull().default(0),
     lockedUntil: text("locked_until"),
+    // MFA (L-A1b, lib/api/staff-mfa.ts). TOTP secret, AES-GCM encrypted with
+    // USAM_MFA_ENCRYPTION_KEY ("v1:<iv b64>:<ciphertext b64>"); never plain.
+    // Set by mfa/setup; MFA is on only once mfa_enabled_at is set (mfa/verify).
+    mfaSecretEnc: text("mfa_secret_enc"),
+    mfaEnabledAt: text("mfa_enabled_at"),
+    // Last accepted TOTP time step (replay guard: a step is accepted once).
+    mfaLastStep: integer("mfa_last_step").notNull().default(0),
   },
   (table) => [uniqueIndex("staff_users_email_uq").on(table.email)],
+);
+
+/** One-time MFA backup codes (L-A1b). Only a keyed hash is stored. */
+export const staffBackupCodes = sqliteTable(
+  "staff_backup_codes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull(),
+    codeHash: text("code_hash").notNull(),
+    createdAt: text("created_at").notNull(),
+    // Set when the code is used, or when a new set replaces it.
+    usedAt: text("used_at"),
+  },
+  (table) => [index("staff_backup_codes_user_idx").on(table.userId)],
 );
 
 /** Staff sessions. `id` is the SHA-256 of the cookie value; the raw value is never stored. */
@@ -524,9 +545,16 @@ export const staffSessions = sqliteTable(
     expiresAt: text("expires_at").notNull(),
     ipHash: text("ip_hash"),
     userAgent: text("user_agent"),
+    // L-A1b. "full" = normal session; "mfa_pending" = passphrase OK, waiting
+    // for the code (auth/login/mfa only); "enrol_only" = a role that must use
+    // MFA has not set it up yet (auth/mfa/setup + verify only).
+    stage: text("stage").notNull().default("full"),
+    // Last successful MFA check in this session (step-up window).
+    mfaVerifiedAt: text("mfa_verified_at"),
   },
   (table) => [index("staff_sessions_user_idx").on(table.userId)],
 );
 
 export type StaffUser = typeof staffUsers.$inferSelect;
 export type StaffSession = typeof staffSessions.$inferSelect;
+export type StaffBackupCode = typeof staffBackupCodes.$inferSelect;
