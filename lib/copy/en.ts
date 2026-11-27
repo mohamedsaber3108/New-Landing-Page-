@@ -43,12 +43,26 @@ export const en: SiteCopy = {
   routes,
   footer: {
     tagline: "Learn · Grow · Work · Discover",
+    navLabel: "Footer",
     exploreHeading: "Explore",
     kidsParents: "Kids & Parents",
-    about: "About",
-    trust: "Trust",
-    faq: "FAQ",
-    contact: "Contact",
+    companyHeading: "Company",
+    companyLinks: [
+      { href: "/about", label: "About" },
+      { href: "/trust", label: "Trust" },
+      { href: "/faq", label: "FAQ" },
+      { href: "/contact", label: "Contact" },
+      { href: "/how-it-works", label: "How it works" },
+      { href: "/pricing", label: "Pricing" },
+    ],
+    // No "Downloads" entry: no real install or download targets exist yet.
+    resourcesHeading: "Resources",
+    resourcesLinks: [
+      { href: "/guide", label: "Guide" },
+      { href: "/status", label: "Status" },
+      { href: "/sitemap", label: "Sitemap" },
+      { href: "/privacy-requests", label: "Your Privacy Choices" },
+    ],
     legalHeading: "Legal & Privacy",
     legalLinks: [
       { href: "/legal", label: "Legal Center" },
@@ -62,15 +76,6 @@ export const en: SiteCopy = {
     ],
     cookieSettings: "Cookie Settings",
     contactHeading: "Contact us",
-    utilityLabel: "Additional information",
-    utilityLinks: [
-      { href: "/how-it-works", label: "How it works" },
-      { href: "/pricing", label: "Pricing" },
-      { href: "/guide", label: "Guide" },
-      { href: "/status", label: "Status" },
-      { href: "/privacy-requests", label: "Your Privacy Choices" },
-      { href: "/sitemap", label: "Sitemap" },
-    ],
     copyright: "© 2026 USAM. One connected ecosystem.",
   },
   page: {
