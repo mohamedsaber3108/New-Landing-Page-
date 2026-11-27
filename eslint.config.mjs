@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -13,6 +14,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // Report-only (warn) until prompt 002 clears the existing findings.
+    // The jsx-a11y plugin itself is already registered by eslint-config-next.
+    files: ["**/*.{jsx,tsx}"],
+    rules: Object.fromEntries(
+      Object.keys(jsxA11y.flatConfigs.recommended.rules).map((rule) => [rule, "warn"]),
+    ),
+  },
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],
     rules: {
