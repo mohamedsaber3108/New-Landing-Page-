@@ -66,12 +66,26 @@ export const ar: SiteCopy = {
   },
   footer: {
     tagline: "تعلم · تطوّر · أنجز · اكتشف",
+    navLabel: "روابط التذييل",
     exploreHeading: "استكشف",
     kidsParents: "الأطفال وأولياء الأمور",
-    about: "عن يوزم",
-    trust: "الثقة",
-    faq: "الأسئلة الشائعة",
-    contact: "تواصل",
+    companyHeading: "الشركة",
+    companyLinks: [
+      { href: "/about", label: "عن يوزم" },
+      { href: "/trust", label: "الثقة" },
+      { href: "/faq", label: "الأسئلة الشائعة" },
+      { href: "/contact", label: "تواصل" },
+      { href: "/how-it-works", label: "كيف تعمل يوزم" },
+      { href: "/pricing", label: "الأسعار" },
+    ],
+    // No "Downloads" entry: no real install or download targets exist yet.
+    resourcesHeading: "المصادر",
+    resourcesLinks: [
+      { href: "/guide", label: "الدليل" },
+      { href: "/status", label: "حالة الخدمات" },
+      { href: "/sitemap", label: "خريطة الموقع" },
+      { href: "/privacy-requests", label: "اختيارات الخصوصية" },
+    ],
     legalHeading: "القانون والخصوصية",
     legalLinks: [
       { href: "/legal", label: "المركز القانوني" },
@@ -85,15 +99,6 @@ export const ar: SiteCopy = {
     ],
     cookieSettings: "إعدادات ملفات الارتباط",
     contactHeading: "تواصل معنا",
-    utilityLabel: "روابط إضافية",
-    utilityLinks: [
-      { href: "/how-it-works", label: "كيف تعمل يوزم" },
-      { href: "/pricing", label: "الأسعار" },
-      { href: "/guide", label: "الدليل" },
-      { href: "/status", label: "حالة الخدمات" },
-      { href: "/privacy-requests", label: "اختيارات الخصوصية" },
-      { href: "/sitemap", label: "خريطة الموقع" },
-    ],
     copyright: "© 2026 يوزم. منظومة واحدة مترابطة.",
   },
   page: {

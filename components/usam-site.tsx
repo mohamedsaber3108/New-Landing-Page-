@@ -6,7 +6,7 @@ import Link from "./nav-link";
 import { ContactInfo } from "./contact-info";
 import { persistPreferences } from "@/lib/locale";
 import { siteCopy, type LinkCopy } from "@/lib/copy";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { Baby, Blocks, Bot, BriefcaseBusiness, Globe2, GraduationCap, Info, Menu, Moon, Route, Sparkles, Sun, X } from "lucide-react";
 import { ResearchLanding, GuideConnector } from "./research-landing";
@@ -91,48 +91,42 @@ function InfoPage({ slug, locale, onGuide }: { slug: string; locale: Locale; onG
 
 // ---- Footer, one small component per column --------------------------------
 
+// L-U1 (owner default OD-41, owner may change): Linear-style columns.
+// Product = only the products in data/products.ts; no invented feature names;
+// no Docs, Downloads or Connect/social column until real targets exist.
+
+function FooterColumn({ id, heading, className, children }: { id: string; heading: string; className?: string; children: ReactNode }) {
+  return <div className={className ? `footer-col ${className}` : "footer-col"}><span id={id}>{heading}</span><ul aria-labelledby={id}>{children}</ul></div>;
+}
+
 function FooterLinks({ links }: { links: LinkCopy[] }) {
-  return <>{links.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}</>;
+  return <>{links.map((l) => <li key={l.href}><Link href={l.href}>{l.label}</Link></li>)}</>;
 }
 
 function FooterBrand({ tagline }: { tagline: string }) {
-  return <div><Mark /><p>{tagline}</p></div>;
+  return <div className="footer-brand"><Mark /><p>{tagline}</p></div>;
 }
 
-function FooterExplore({ locale }: { locale: Locale }) {
-  const { nav, footer } = siteCopy[locale];
-  return <div><span>{footer.exploreHeading}</span><FooterLinks links={[{ href: "/for-individuals", label: nav.individuals }, { href: "/for-enterprises", label: nav.enterprises }, { href: "/government", label: nav.government }, { href: "/kids", label: footer.kidsParents }]} /></div>;
-}
-
-function FooterProducts({ locale }: { locale: Locale }) {
-  return <div><span>{siteCopy[locale].nav.products}</span>{products.map((product) => <a key={product.id} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{locale === "ar" ? product.arabicName : product.name}</a>)}</div>;
-}
-
-function FooterAbout({ locale }: { locale: Locale }) {
-  const f = siteCopy[locale].footer;
-  // The brand name stays Latin in both languages, marked lang="en" (PR #11).
-  return <div><span lang="en">USAM</span><FooterLinks links={[{ href: "/about", label: f.about }, { href: "/trust", label: f.trust }, { href: "/faq", label: f.faq }, { href: "/contact", label: f.contact }]} /></div>;
-}
-
-function FooterLegal({ locale }: { locale: Locale }) {
-  // All eight legal destinations live together under one "Legal & Privacy"
-  // group — including AI & Data Use and Privacy Requests.
-  const f = siteCopy[locale].footer;
-  return <div className="footer-legal"><span>{f.legalHeading}</span><FooterLinks links={f.legalLinks} /><button type="button" className="footer-cookie-btn" onClick={() => openCookieSettings()}>{f.cookieSettings}</button></div>;
+function FooterColumns({ locale }: { locale: Locale }) {
+  const { nav, footer: f } = siteCopy[locale];
+  const explore: LinkCopy[] = [{ href: "/for-individuals", label: nav.individuals }, { href: "/for-enterprises", label: nav.enterprises }, { href: "/government", label: nav.government }, { href: "/kids", label: f.kidsParents }];
+  return <nav className="footer-columns" aria-label={f.navLabel}>
+    <FooterColumn id="footer-product" heading={nav.products}>{products.map((product) => <li key={product.id}><a href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{locale === "ar" ? product.arabicName : product.name}</a></li>)}</FooterColumn>
+    <FooterColumn id="footer-explore" heading={f.exploreHeading}><FooterLinks links={explore} /></FooterColumn>
+    <FooterColumn id="footer-company" heading={f.companyHeading}><FooterLinks links={f.companyLinks} /></FooterColumn>
+    <FooterColumn id="footer-resources" heading={f.resourcesHeading}><FooterLinks links={f.resourcesLinks} /></FooterColumn>
+    {/* All eight legal destinations together, plus the Cookie Settings button. */}
+    <FooterColumn id="footer-legal" heading={f.legalHeading} className="footer-legal"><FooterLinks links={f.legalLinks} /><li><button type="button" className="footer-cookie-btn" onClick={() => openCookieSettings()}>{f.cookieSettings}</button></li></FooterColumn>
+  </nav>;
 }
 
 function FooterContact({ locale }: { locale: Locale }) {
   return <div className="footer-contact"><span>{siteCopy[locale].footer.contactHeading}</span><ContactInfo locale={locale} variant="footer" /></div>;
 }
 
-function FooterUtility({ locale }: { locale: Locale }) {
-  const f = siteCopy[locale].footer;
-  return <nav className="footer-utility" aria-label={f.utilityLabel}><FooterLinks links={f.utilityLinks} /></nav>;
-}
-
 function Footer({ locale }: { locale: Locale }) {
   const f = siteCopy[locale].footer;
-  return <footer className="site-footer section-shell"><FooterBrand tagline={f.tagline} /><FooterExplore locale={locale} /><FooterProducts locale={locale} /><FooterAbout locale={locale} /><FooterLegal locale={locale} /><FooterContact locale={locale} /><FooterUtility locale={locale} /><small>{f.copyright}</small></footer>;
+  return <footer className="site-footer section-shell"><FooterBrand tagline={f.tagline} /><FooterColumns locale={locale} /><FooterContact locale={locale} /><small>{f.copyright}</small></footer>;
 }
 
 export function USAMSite({ kind = "home", slug, initialLocale = "en" }: { kind?: RouteKind; slug?: string; initialLocale?: Locale }) {

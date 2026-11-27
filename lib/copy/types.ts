@@ -44,20 +44,24 @@ export type SiteCopy = {
   };
   /** Info-page hero, by route slug. */
   routes: Record<string, RouteDetail>;
+  /**
+   * Footer columns (L-U1): Product (from data/products.ts, heading nav.products),
+   * Explore, Company, Resources, Legal; then contact and copyright.
+   */
   footer: {
     tagline: string;
+    /** aria-label of the <nav> around the link columns. */
+    navLabel: string;
     exploreHeading: string;
     kidsParents: string;
-    about: string;
-    trust: string;
-    faq: string;
-    contact: string;
+    companyHeading: string;
+    companyLinks: LinkCopy[];
+    resourcesHeading: string;
+    resourcesLinks: LinkCopy[];
     legalHeading: string;
     legalLinks: LinkCopy[];
     cookieSettings: string;
     contactHeading: string;
-    utilityLabel: string;
-    utilityLinks: LinkCopy[];
     copyright: string;
   };
   page: {

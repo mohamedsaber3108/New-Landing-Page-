@@ -214,15 +214,28 @@
 .cookie-modal-close{position:absolute;inset-inline-end:12px;top:10px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:1.3rem;line-height:1}
 .cookie-modal .cookie-settings{margin-top:20px;border:0;background:transparent;padding:0}
 
-.footer-legal{display:grid;align-content:start;gap:4px}
-.footer-legal>span{font-size:.65rem;color:var(--ink);font-weight:850;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
-/* Legal links + the Cookie Settings button share one look: readable size,
-   wrapping labels, comfortable touch targets, visible keyboard focus. */
-.footer-legal a,.footer-cookie-btn{display:block;min-height:30px;line-height:1.35;padding:4px 0;font-size:.8rem;color:var(--ink-soft);overflow-wrap:anywhere}
-.footer-legal a:hover,.footer-cookie-btn:hover{color:var(--accent);text-decoration:underline}
+/* Footer (L-U1): brand | five link columns (Product, Explore, Company,
+   Resources, Legal) in one <nav>; then contact and copyright full width.
+   Logical order only, so Arabic RTL mirrors by itself. Wider screens first;
+   these rules come after the older .site-footer media rules on purpose. */
+.site-footer{grid-template-columns:minmax(0,1fr) minmax(0,4fr)}
+.footer-columns{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:28px}
+.footer-col{display:grid;align-content:start;gap:4px;min-width:0}
+.footer-col>span{font-size:.875rem;color:var(--ink);font-weight:850;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.locale-ar .footer-col>span{letter-spacing:0}
+.footer-col ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+/* Links + the Cookie Settings button share one look: readable size,
+   wrapping labels, targets of 30 px (40 px on phones), visible keyboard focus. */
+.footer-col a,.footer-cookie-btn{display:block;min-height:30px;line-height:1.35;padding:4px 0;font-size:.875rem;color:var(--ink-soft);overflow-wrap:anywhere}
+.footer-col a:hover,.footer-cookie-btn:hover{color:var(--accent);text-decoration:underline}
 .footer-cookie-btn{justify-self:start;border:0;background:transparent;font:inherit;text-align:start;cursor:pointer}
-.footer-legal a:focus-visible,.footer-cookie-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
-@media(max-width:720px){.footer-legal a,.footer-cookie-btn{min-height:40px;padding:7px 0}}
+.footer-col a:focus-visible,.footer-cookie-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+/* Copyright: #6e8580 failed 4.5:1 on the light home background (axe). */
+.site-footer small{color:var(--ink-soft)}
+/* Contact e-mail link: at least a 24 px target (WCAG 2.5.8). */
+.site-footer .contact-info-row a{min-height:24px}
+@media(max-width:1080px){.site-footer{grid-template-columns:1fr}.footer-columns{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.footer-columns{grid-template-columns:repeat(2,minmax(0,1fr));gap:25px}.footer-col a,.footer-cookie-btn{min-height:40px;padding:7px 0}}
 /* Privacy-notice line shown in forms when Terms are still draft (no gate). */
 .lead-notice{margin:4px 0 2px;font-size:.78rem;line-height:1.55;color:var(--ink-soft)}
 .lead-notice a{color:var(--accent);font-weight:700}
