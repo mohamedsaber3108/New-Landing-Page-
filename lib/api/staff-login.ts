@@ -1,8 +1,8 @@
 // Staff sign-in / sign-out / who-am-I (L-A1a).
-//  - Per-IP rate limit (staffLogin) and per-account lockout: 5 failed
-//    sign-ins lock the account for 15 minutes.
-//  - Unknown email, wrong passphrase and disabled account all get the same
-//    401 message, and an unknown email still runs one PBKDF2 derive.
+//  - Per-IP rate limit (staffLogin); lockout per account + IP pair plus an
+//    account-wide backstop (lib/api/staff-lockout.ts).
+//  - Unknown email, disabled account, wrong passphrase and locked account all
+//    get the same 401 and body, after exactly one PBKDF2 derive.
 //  - Origin check (CSRF) on sign-in and sign-out.
 
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { fail, ok } from "./envelope";
 import type { Db } from "./idempotency";
 import { clientIp, rateLimit } from "./rate-limit";
 import { DUMMY_HASH, verifyPassphrase } from "./staff-password";
+import { accountLocked, clearAccountFailures, pairLocked, recordAccountFailure, recordPairFailure } from "./staff-lockout";
 import { ROLE_PERMISSIONS, type StaffRole } from "./staff-permissions";
 import {
   SESSION_ABSOLUTE_MS,
@@ -24,8 +25,6 @@ import {
   sessionCookie,
 } from "./staff-session";
 
-export const MAX_FAILED_SIGNINS = 5;
-export const LOCKOUT_MS = 15 * 60_000;
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -60,35 +59,28 @@ export async function login(request: Request, requestId: string): Promise<Respon
 
   try {
     const rows = await db().select().from(staffUsers).where(eq(staffUsers.email, parsed.data.email)).limit(1);
-    const user = rows[0];
+    const found = rows[0];
+    const user = found && !found.disabledAt ? found : null;
     const now = Date.now();
+    const ip = clientIp(request);
 
-    if (!user || user.disabledAt) {
-      await verifyPassphrase(parsed.data.passphrase, DUMMY_HASH); // same cost as a real check
-      return fail({ code: "unauthenticated", message: BAD_LOGIN, requestId });
-    }
-    if (user.lockedUntil && Date.parse(user.lockedUntil) > now) {
-      const seconds = Math.ceil((Date.parse(user.lockedUntil) - now) / 1000);
-      return fail({
-        code: "rate_limited",
-        message: "Too many failed sign-ins. Try again later.",
-        requestId,
-        headers: { "Retry-After": String(seconds) },
-      });
-    }
+    // Exactly ONE PBKDF2 on every path (dummy hash when there is no usable
+    // account), and the same 401 + body for unknown, disabled, wrong and
+    // locked, so neither status nor timing reveals which it was.
+    const passOk = await verifyPassphrase(parsed.data.passphrase, user ? user.passwordHash : DUMMY_HASH);
+    if (!user) return fail({ code: "unauthenticated", message: BAD_LOGIN, requestId });
 
-    if (!(await verifyPassphrase(parsed.data.passphrase, user.passwordHash))) {
-      const failed = (user.failedCount ?? 0) + 1;
-      const lock = failed >= MAX_FAILED_SIGNINS;
-      await db()
-        .update(staffUsers)
-        .set(lock ? { failedCount: 0, lockedUntil: new Date(now + LOCKOUT_MS).toISOString() } : { failedCount: failed })
-        .where(eq(staffUsers.id, user.id));
+    const locked = pairLocked(request, user.id, ip) || accountLocked(user.lockedUntil, now);
+    if (!passOk || locked) {
+      if (!passOk) {
+        recordPairFailure(request, user.id, ip);
+        await recordAccountFailure(db(), user.id, now);
+      }
       return fail({ code: "unauthenticated", message: BAD_LOGIN, requestId });
     }
 
-    await db().update(staffUsers).set({ failedCount: 0, lockedUntil: null }).where(eq(staffUsers.id, user.id));
-    const token = await createSession(user, request, clientIp(request));
+    await clearAccountFailures(db(), user.id);
+    const token = await createSession(user, request, ip);
     return ok(
       { user: publicUser(user) },
       { requestId, headers: { "Set-Cookie": sessionCookie(token, SESSION_ABSOLUTE_MS / 1000), "Cache-Control": "no-store" } },

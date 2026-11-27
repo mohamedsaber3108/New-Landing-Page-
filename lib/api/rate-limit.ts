@@ -17,6 +17,8 @@ export const RATE_LIMITS = {
   feedback: { limit: 30, windowMs: 10 * 60_000 },
   // Staff sign-in (L-A1a), per IP; on top of the per-account lockout.
   staffLogin: { limit: 10, windowMs: 15 * 60_000 },
+  // Failed sign-ins per staff account + IP pair (lib/api/staff-lockout.ts).
+  staffLoginPair: { limit: 5, windowMs: 15 * 60_000 },
 } satisfies Record<string, RateLimitRule>;
 
 export type LimitName = keyof typeof RATE_LIMITS;

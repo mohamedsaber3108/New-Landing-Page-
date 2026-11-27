@@ -38,8 +38,8 @@ const TOKEN = "b".repeat(48); // test-only
 let ip = 0;
 const nextIp = () => `10.91.${Math.floor(++ip / 250)}.${(ip % 250) + 1}`;
 
-function req(path: string, init: { method?: string; cookie?: string; origin?: string | null; body?: unknown; token?: string } = {}) {
-  const headers: Record<string, string> = { "Content-Type": "application/json", "X-Real-IP": nextIp() };
+function req(path: string, init: { method?: string; cookie?: string; origin?: string | null; body?: unknown; token?: string; ip?: string } = {}) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", "X-Real-IP": init.ip ?? nextIp() };
   if (init.origin !== null) headers.origin = init.origin ?? ORIGIN;
   if (init.cookie) headers.cookie = `${SESSION_COOKIE}=${init.cookie}`;
   if (init.token !== undefined) headers["x-admin-token"] = init.token;
@@ -66,8 +66,8 @@ async function addUser(email: string, role: string, extra: Record<string, unknow
   });
 }
 
-async function signIn(email: string, passphrase = PASS) {
-  const res = await loginPOST(req("/api/v1/admin/auth/login", { method: "POST", body: { email, passphrase } }));
+async function signIn(email: string, passphrase = PASS, ip?: string) {
+  const res = await loginPOST(req("/api/v1/admin/auth/login", { method: "POST", body: { email, passphrase }, ip }));
   const setCookie = res.headers.get("set-cookie") ?? "";
   const cookie = new RegExp(`${SESSION_COOKIE}=([^;]*)`).exec(setCookie)?.[1] ?? "";
   return { res, setCookie, cookie };
@@ -132,13 +132,54 @@ describe("sign-in", () => {
     expect(new Set(messages).size).toBe(1);
   });
 
-  it("locked: 5 failed sign-ins lock the account for 15 minutes, even with the right passphrase", async () => {
-    for (let i = 0; i < 5; i++) expect((await signIn("admin@example.test", "wrong passphrase!!")).res.status).toBe(401);
-    const locked = await signIn("admin@example.test");
-    expect(locked.res.status).toBe(429);
-    expect(Number(locked.res.headers.get("retry-after"))).toBeGreaterThan(14 * 60);
+  it("locked: 5 failures from one IP lock that account+IP pair for up to 15 min, even with the right passphrase", async () => {
+    const A = "203.0.113.7";
+    for (let i = 0; i < 5; i++) expect((await signIn("admin@example.test", "wrong passphrase!!", A)).res.status).toBe(401);
+    expect((await signIn("admin@example.test", PASS, A)).res.status).toBe(401);
     vi.setSystemTime(new Date(Date.now() + 15 * 60_000 + 1000));
-    expect((await signIn("admin@example.test")).res.status).toBe(200);
+    expect((await signIn("admin@example.test", PASS, A)).res.status).toBe(200);
+  });
+
+  it("keep-locked DoS: an attacker on one IP cannot lock out the real admin on another IP", async () => {
+    const attacker = "198.51.100.66";
+    for (let i = 0; i < 5; i++) await signIn("owner@example.test", "wrong passphrase!!", attacker);
+    expect((await signIn("owner@example.test", PASS, attacker)).res.status).toBe(401);
+    expect((await signIn("owner@example.test", PASS, "192.0.2.10")).res.status).toBe(200);
+  });
+
+  it("no enumeration: unknown email, wrong passphrase and locked account give the same status and body, each after one PBKDF2", async () => {
+    const A = "203.0.113.9";
+    for (let i = 0; i < 5; i++) await signIn("agent@example.test", "wrong passphrase!!", A); // lock agent+A
+    const derive = vi.spyOn(crypto.subtle, "deriveBits");
+    const shapes = [];
+    for (const [email, pass] of [["nobody@example.test", PASS], ["agent@example.test", "wrong passphrase!!"], ["agent@example.test", PASS]]) {
+      derive.mockClear();
+      const { res } = await signIn(email, pass, A);
+      expect(derive, `${email} ran one PBKDF2`).toHaveBeenCalledTimes(1);
+      const body = (await res.json()) as { error: Record<string, unknown> };
+      const { requestId: _drop, ...rest } = body.error;
+      shapes.push(JSON.stringify({ status: res.status, retryAfter: res.headers.get("retry-after"), rest }));
+    }
+    derive.mockRestore();
+    expect(new Set(shapes).size).toBe(1);
+    expect(JSON.parse(shapes[0]).status).toBe(401);
+  });
+
+  it("session ip_hash: none without USAM_SESSION_HASH_SALT; keyed HMAC with it", async () => {
+    delete ENV.USAM_SESSION_HASH_SALT;
+    await signIn("owner@example.test", PASS, "192.0.2.20");
+    expect(store.tables.staff_sessions.at(-1)!.ipHash).toBeNull();
+    ENV.USAM_SESSION_HASH_SALT = "s".repeat(40); // test-only
+    try {
+      await signIn("owner@example.test", PASS, "192.0.2.20");
+      const h1 = store.tables.staff_sessions.at(-1)!.ipHash as string;
+      expect(h1).toMatch(/^[0-9a-f]{64}$/);
+      ENV.USAM_SESSION_HASH_SALT = "t".repeat(40);
+      await signIn("owner@example.test", PASS, "192.0.2.20");
+      expect(store.tables.staff_sessions.at(-1)!.ipHash).not.toBe(h1); // depends on the secret
+    } finally {
+      delete ENV.USAM_SESSION_HASH_SALT;
+    }
   });
 
   it("refuses a sign-in with a missing or foreign Origin (CSRF)", async () => {

@@ -71,6 +71,20 @@ function db(): Db {
   return getDb() as unknown as Db;
 }
 
+/**
+ * HMAC-SHA256 of the client IP with the server-side secret
+ * USAM_SESSION_HASH_SALT (name only; value in ~/.usam/dev.vars). A plain hash
+ * of an IPv4 address can be reversed by trying all 4 billion, so with no salt
+ * set NOTHING is stored (null): no ip_hash rather than a weak one.
+ */
+export async function keyedIpHash(ip: string | null): Promise<string | null> {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+  const salt = env.USAM_SESSION_HASH_SALT;
+  if (!ip || !salt) return null;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(salt), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return toHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(ip)));
+}
+
 /** Create a session for `user`; returns the cookie value (raw, only in the Set-Cookie). */
 export async function createSession(user: StaffUser, request: Request, ip: string | null): Promise<string> {
   const token = randomToken();
@@ -81,7 +95,7 @@ export async function createSession(user: StaffUser, request: Request, ip: strin
     createdAt: new Date(now).toISOString(),
     lastSeenAt: new Date(now).toISOString(),
     expiresAt: new Date(now + SESSION_ABSOLUTE_MS).toISOString(),
-    ipHash: ip ? await sha256Hex(`ip:${ip}`) : null,
+    ipHash: await keyedIpHash(ip),
     userAgent: (request.headers.get("user-agent") ?? "").slice(0, 120) || null,
   });
   return token;
