@@ -26,6 +26,7 @@ import {
 import { hashBody, reserveIdempotencyKey, type Db } from "./idempotency";
 import { consentInsertStatements, type RecordConsentInput } from "./consent";
 import { getPolicyRequirement } from "@/lib/legal/store";
+import { resolveChannel } from "./outbox-worker";
 
 export const LEADS_SCOPE = "POST /api/v1/leads";
 
@@ -120,7 +121,7 @@ export function flattenFieldErrors(error: z.ZodError): FieldErrors {
 export function notificationChannelConfigured(): boolean {
   // Read from the Worker/process env without assuming a specific provider.
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-  return Boolean(env.USAM_LEAD_NOTIFY_WEBHOOK || env.USAM_LEAD_NOTIFY_EMAIL);
+  return resolveChannel(env).kind !== "none"; // a non-https webhook counts as not configured
 }
 
 /**
