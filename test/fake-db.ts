@@ -22,6 +22,7 @@ type Row = Record<string, unknown>;
 type Pred =
   | { kind: "eq"; col: ColRef; value: unknown }
   | { kind: "lt"; col: ColRef; value: unknown }
+  | { kind: "lte"; col: ColRef; value: unknown }
   | { kind: "and"; parts: Pred[] };
 type ColRef = { _table: string; _name: string };
 
@@ -87,6 +88,8 @@ export class FakeStore {
     if (pred.kind === "and") return pred.parts.every((p) => this.matches(table, row, p));
     const { name } = colName(pred.col);
     if (pred.kind === "lt") return (row[name] as number) < (pred.value as number);
+    // Same as SQLite text comparison for ISO timestamps.
+    if (pred.kind === "lte") return String(row[name]) <= String(pred.value);
     return row[name] === pred.value;
   }
 
