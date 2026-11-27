@@ -5,6 +5,8 @@
 //     one of three roles. The route's permission is checked against the fixed
 //     list in lib/api/staff-permissions.ts (wrong role -> 403). Writes made with
 //     a session must pass the Origin check (CSRF -> 403).
+//     L-A1b: MFA is required for super_admin and admin, and sensitive
+//     permissions (STEP_UP_PERMISSIONS) need a step-up check within 5 min.
 //  2. Break-glass: the shared `x-admin-token` header against env
 //     `USAM_ADMIN_TOKEN`, unchanged from before. Full access. Used by trusted
 //     tools (curl), never by the website. A request that sends the header is
@@ -25,8 +27,17 @@
 
 import { fail } from "./envelope";
 import { clientIp, limitKey } from "./rate-limit";
-import { roleHas, type Permission } from "./staff-permissions";
-import { getSession, isWrite, originAllowed, readSessionCookie } from "./staff-session";
+import { STEP_UP_MS, STEP_UP_PERMISSIONS, mfaRequired, roleHas, type Permission } from "./staff-permissions";
+import { getSession, isWrite, originAllowed, readSessionCookie, type ActiveSession } from "./staff-session";
+
+/** True when this session passed an MFA check less than STEP_UP_MS ago. */
+export function stepUpFresh(session: ActiveSession): boolean {
+  return Boolean(session.mfaVerifiedAt) && Date.now() - Date.parse(session.mfaVerifiedAt as string) < STEP_UP_MS;
+}
+
+export function stepUpNeeded(requestId: string): Response {
+  return fail({ code: "forbidden", message: "This action needs a fresh MFA code. Confirm with auth/mfa/step-up and try again.", requestId });
+}
 
 function configuredToken(): string | undefined {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -68,12 +79,23 @@ async function check(request: Request, requestId: string, permission: Permission
     if (!session) {
       return fail({ code: "unauthenticated", message: "Your session has ended. Please sign in again.", requestId });
     }
+    // L-A1b: only a full session counts. "mfa_pending" (code not yet given)
+    // is not signed in; a role that must use MFA may only enrol until it is on
+    // (this also covers sessions opened before MFA existed).
+    if (session.stage === "mfa_pending") {
+      return fail({ code: "unauthenticated", message: "Your session has ended. Please sign in again.", requestId });
+    }
+    if (session.stage !== "full" || (mfaRequired(session.user.role) && !session.user.mfaEnabledAt)) {
+      return fail({ code: "forbidden", message: "Set up MFA for your account before using the admin area.", requestId });
+    }
     if (isWrite(request) && !originAllowed(request)) {
       return fail({ code: "forbidden", message: "Request origin is not allowed.", requestId });
     }
     if (!roleHas(session.user.role, permission)) {
       return fail({ code: "forbidden", message: "Your role does not allow this action.", requestId });
     }
+    // Sensitive actions (ADMIN.md s.5): an MFA check in this session within 5 min.
+    if (STEP_UP_PERMISSIONS.includes(permission) && !stepUpFresh(session)) return stepUpNeeded(requestId);
     return null;
   }
 
