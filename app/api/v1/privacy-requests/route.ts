@@ -3,6 +3,7 @@
 // by staff (admin endpoint); nothing is disclosed or deleted here.
 
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
+import { rateLimit } from "@/lib/api/rate-limit";
 import {
   createPrivacyRequest,
   createPrivacyRequestSchema,
@@ -13,6 +14,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const requestId = newRequestId();
+  const limited = rateLimit(request, "privacyRequests", requestId);
+  if (limited) return limited;
 
   let raw: unknown;
   try {

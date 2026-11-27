@@ -10,10 +10,19 @@
 
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { createLead, createLeadSchema, flattenFieldErrors, listOwnLeads } from "@/lib/api/leads";
+import { newRequestId } from "@/lib/api/envelope";
+import { rateLimit } from "@/lib/api/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  // Same per-IP "leads" counter as /api/v1/leads, so the alias is not a bypass.
+  const limited = rateLimit(request, "leads", newRequestId());
+  if (limited) {
+    const body = (await limited.json()) as { error: { message: string } };
+    return Response.json({ error: body.error.message }, { status: 429, headers: limited.headers });
+  }
+
   let raw: unknown;
   try {
     raw = await request.json();

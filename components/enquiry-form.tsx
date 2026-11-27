@@ -180,7 +180,7 @@ export function EnquiryForm({ locale, variant }: { locale: Locale; variant: Vari
     try {
       const response = await fetch("/api/v1/leads", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey.current },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey.current, "X-USAM-Locale": locale },
         body: JSON.stringify(payload),
       });
       const json = (await response.json().catch(() => null)) as

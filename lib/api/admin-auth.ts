@@ -9,10 +9,16 @@
 //    embedded in frontend bundles, placed in URLs, or written to public files.
 //    Staff supply it as an `x-admin-token` request header from a trusted tool
 //    (e.g. curl / an internal admin client), not from the website UI.
+//  - Token rule: random (e.g. `openssl rand -hex 32`), at least 32 characters,
+//    rotated whenever staff with access change, and never pasted in chat,
+//    tickets or the repo.
+//  - Every admin request is rate limited per IP (see rate-limit.ts) before the
+//    token is checked.
 //
 // Returns null when authorized; otherwise a ready-to-return error Response.
 
 import { fail } from "./envelope";
+import { rateLimit } from "./rate-limit";
 
 function configuredToken(): string | undefined {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -28,6 +34,9 @@ export function adminConfigured(): boolean {
  * directly; on success returns null (proceed). Uses a constant-time-ish compare.
  */
 export function authorizeAdmin(request: Request, requestId: string): Response | null {
+  // Limit first, so token guessing is slowed even when the token is wrong.
+  const limited = rateLimit(request, "admin", requestId);
+  if (limited) return limited;
   const token = configuredToken();
   if (!token) {
     return fail({

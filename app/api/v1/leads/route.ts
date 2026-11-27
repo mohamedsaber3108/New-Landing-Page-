@@ -6,6 +6,7 @@
 // Response envelope: { data, meta } on success, { error } on failure.
 
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
+import { rateLimit } from "@/lib/api/rate-limit";
 import {
   createLead,
   createLeadSchema,
@@ -17,6 +18,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const requestId = newRequestId();
+  const limited = rateLimit(request, "leads", requestId);
+  if (limited) return limited;
 
   let raw: unknown;
   try {
