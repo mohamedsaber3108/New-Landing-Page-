@@ -97,8 +97,11 @@ routes together, checked before the token); `POST /api/v1/leads` and
 `/api/enquiries` 10 per 10 min (shared); `POST /api/v1/privacy-requests` 5 per
 10 min; `POST /api/v1/feedback` 30 per 10 min. Over the limit returns `429`
 with `Retry-After` and a plain Arabic or English message with the wait time.
-The client IP is the last `X-Forwarded-For` entry, so nginx must append it
-(`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`).
+Client IP order: `X-Real-IP`, then the last `X-Forwarded-For` entry. nginx must
+send `proxy_set_header X-Real-IP $remote_addr;`. `CF-Connecting-IP` is read
+first only when `USAM_TRUST_CF_CONNECTING_IP=1`; set that only if the origin
+accepts traffic from Cloudflare alone. With no IP header, public forms are not
+limited (no shared bucket) and admin counts only failed token checks.
 
 ---
 
