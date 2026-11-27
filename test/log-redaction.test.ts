@@ -27,13 +27,22 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 // Marker values: if any of these shows up in a log line, it is a leak.
-const NAME = "Zelda LogMarkerName";
-const EMAIL = "zelda.logmarker@example.org";
-const PHONE = "+20 100 777 4242";
-const MESSAGE = "LogMarkerMessage please call me about our forty learners.";
-const ORG = "LogMarker Org";
-const GOAL = "LogMarkerGoal I want to learn python for my job";
-const MARKERS = [NAME, EMAIL, PHONE, MESSAGE, ORG, GOAL, "LogMarker", "logmarker", "4242"];
+// Collision-proof: each token mixes lower-case letters a reference (upper-case
+// A-Z/2-9), a request id (hex) or an ISO timestamp can never contain, and the
+// phone is matched only as its full string with "+" and spaces. Never assert on
+// a short digit run: random references and timestamps can contain any digits
+// (the old "4242" marker made CI run 46059923775 fail at random).
+const NAME = "Zelda zzNAMEmarker7319";
+const EMAIL = "zz.emailmarker7319@example.org"; // lower-case: the schema lower-cases emails
+const PHONE = "+20 109 731 9731";
+const MESSAGE = "zzMESSAGEmarker7319 please call me about our forty learners.";
+const ORG = "zzORGmarker7319 Org";
+const GOAL = "zzGOALmarker7319 I want to learn python for my job";
+const MARKERS = [
+  NAME, EMAIL, PHONE, MESSAGE, ORG, GOAL,
+  // the unique tokens alone, so a partial echo (e.g. a trimmed message) is still caught
+  "zzNAMEmarker7319", "zz.emailmarker7319", "zzMESSAGEmarker7319", "zzORGmarker7319", "zzGOALmarker7319",
+];
 
 const store = new FakeStore();
 // The shared FakeStore has no content_feedback / guide_signals tables; this
@@ -104,7 +113,7 @@ const WORKFLOWS: Array<[string, () => Promise<Response>, number, number]> = [
   ["leads: contact", () => leadsPOST(post("/api/v1/leads", { name: NAME, email: EMAIL, kind: "general", message: MESSAGE, organization: ORG })), 201, 500],
   ["leads: enterprise", () => leadsPOST(post("/api/v1/leads", { name: NAME, email: EMAIL, kind: "enterprise", organization: ORG, message: MESSAGE, structured: { phone: PHONE, role: NAME, country: ORG } })), 201, 500],
   ["leads: government", () => leadsPOST(post("/api/v1/leads", { name: NAME, email: EMAIL, kind: "government", organization: ORG, message: MESSAGE, structured: { phone: PHONE, beneficiaries: MESSAGE } })), 201, 500],
-  ["leads: invalid (validation error path)", () => leadsPOST(post("/api/v1/leads", { name: NAME, email: "not-an-email-logmarker", message: "short" })), 422, 422],
+  ["leads: invalid (validation error path)", () => leadsPOST(post("/api/v1/leads", { name: NAME, email: "not-an-email-zz.emailmarker7319", message: "short" })), 422, 422],
   ["/api/enquiries alias", () => enquiriesPOST(post("/api/enquiries", { name: NAME, email: EMAIL, category: "general", message: MESSAGE })), 201, 500],
   ["privacy request", () => privacyPOST(post("/api/v1/privacy-requests", { requestType: "access", name: NAME, email: EMAIL, message: MESSAGE, relatedReference: "USAM-LOGMRK" })), 201, 500],
   ["feedback", () => feedbackPOST(post("/api/v1/feedback", { contentId, rating: 1 })), 201, 500],
