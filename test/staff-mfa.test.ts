@@ -29,7 +29,8 @@ import { POST as stepUpPOST } from "@/app/api/v1/admin/auth/mfa/step-up/route";
 import { POST as verifyPOST } from "@/app/api/v1/admin/auth/mfa/verify/route";
 import { resetRateLimits } from "@/lib/api/rate-limit";
 import { BAD_CODE } from "@/lib/api/staff-mfa-flow";
-import { base32Encode, encryptSecret, otpauthUri, totp } from "@/lib/api/staff-mfa";
+import { base32Encode, encryptSecret, otpauthUri, startEnrolment, totp } from "@/lib/api/staff-mfa";
+import type { StaffUser } from "@/db/schema";
 import { hashPassphrase } from "@/lib/api/staff-password";
 import { SESSION_COOKIE } from "@/lib/api/staff-session";
 
@@ -167,6 +168,27 @@ describe("enrolment (required for admin and super_admin)", () => {
     expect((await setupPOST(req("/api/v1/admin/auth/mfa/setup", { cookie: full }))).status).toBe(409); // already on
   });
 
+  it("B2: setup for an enrolled user changes nothing, even with a stale user row (race)", async () => {
+    const owner = store.tables.staff_users[0];
+    const before = { enc: owner.mfaSecretEnc, at: owner.mfaEnabledAt };
+    const cookie = await ownerSession();
+    expect((await setupPOST(req("/api/v1/admin/auth/mfa/setup", { cookie }))).status).toBe(409);
+    // A parallel request that read the row before MFA was on: the UPDATE is conditional.
+    const stale = { ...owner, mfaEnabledAt: null } as unknown as StaffUser;
+    expect(await startEnrolment(stale)).toBeNull();
+    expect({ enc: owner.mfaSecretEnc, at: owner.mfaEnabledAt }).toEqual(before);
+    expect((await leadsRoute.GET(req("/api/v1/admin/leads", { method: "GET", cookie }))).status).toBe(200);
+  });
+
+  it("B2: verify only turns on the secret the code was made from (a second setup replaces the first)", async () => {
+    const enrol = cookieOf(await login("new-admin@example.test"));
+    const first = (await json(await setupPOST(req("/api/v1/admin/auth/mfa/setup", { cookie: enrol })))).data.secret as string;
+    const second = (await json(await setupPOST(req("/api/v1/admin/auth/mfa/setup", { cookie: enrol })))).data.secret as string;
+    tick();
+    expect((await code(enrol, "/mfa/verify", await totp(first))).status).toBe(401);
+    expect((await code(enrol, "/mfa/verify", await totp(second))).status).toBe(200);
+  });
+
   it("refuses set-up with a clear error when USAM_MFA_ENCRYPTION_KEY is not set, and stores nothing", async () => {
     const enrol = cookieOf(await login("new-admin@example.test"));
     delete ENV.USAM_MFA_ENCRYPTION_KEY;
@@ -263,6 +285,48 @@ describe("sign-in second step", () => {
     expect(locked.status).toBe(401);
     expect((await json(locked)).error.message).toBe(BAD_CODE);
     expect(store.tables.staff_users[0].mfaLastStep).toBe(0); // the code was not even checked
+  });
+
+  it("B1: 5 wrong codes on one pending session end it, even from 5 different IPs", async () => {
+    const pending = cookieOf(await login("owner@example.test"));
+    for (let i = 0; i < 5; i++) expect((await code(pending, "/login/mfa", "111111", `198.51.100.${i + 1}`)).status).toBe(401);
+    const row = store.tables.staff_sessions.find((s) => s.stage === "mfa_pending")!;
+    expect(Date.parse(String(row.expiresAt))).toBeLessThanOrEqual(Date.now()); // revoked in the DB
+    tick();
+    const late = await code(pending, "/login/mfa", await totp(OWNER_SECRET), "198.51.100.9");
+    expect(late.status).toBe(401);
+    expect((await json(late)).error.message).toBe(BAD_CODE);
+    // A fresh sign-in still works (the account is not locked by this).
+    const fresh = cookieOf(await login("owner@example.test"));
+    expect((await code(fresh, "/login/mfa", await totp(OWNER_SECRET))).status).toBe(200);
+  });
+
+  it("B1: 4 wrong codes leave the pending session usable", async () => {
+    const pending = cookieOf(await login("owner@example.test"));
+    for (let i = 0; i < 4; i++) await code(pending, "/login/mfa", "111111", `198.51.101.${i + 1}`);
+    tick();
+    expect((await code(pending, "/login/mfa", await totp(OWNER_SECRET))).status).toBe(200);
+  });
+
+  it("accepts a code typed in Arabic-Indic or Eastern Arabic-Indic digits", async () => {
+    tick();
+    const toArabic = (s: string, base: number) => [...s].map((d) => String.fromCharCode(base + Number(d))).join("");
+    const p1 = cookieOf(await login("owner@example.test"));
+    expect((await code(p1, "/login/mfa", toArabic(await totp(OWNER_SECRET), 0x0660))).status).toBe(200);
+    tick();
+    const p2 = cookieOf(await login("owner@example.test"));
+    expect((await code(p2, "/login/mfa", toArabic(await totp(OWNER_SECRET), 0x06f0))).status).toBe(200);
+  });
+
+  it("a secret that cannot be decrypted (key changed) gets its own error, not 'key missing'", async () => {
+    const pending = cookieOf(await login("owner@example.test"));
+    ENV.USAM_MFA_ENCRYPTION_KEY = "z".repeat(40); // a different key
+    tick();
+    const res = await code(pending, "/login/mfa", await totp(OWNER_SECRET));
+    expect(res.status).toBe(500);
+    const msg = (await json(res)).error.message;
+    expect(msg).toMatch(/cannot be checked/);
+    expect(msg).not.toContain("USAM_MFA_ENCRYPTION_KEY");
   });
 
   it("rate limit: more than 10 MFA requests per IP in 15 min -> 429", async () => {

@@ -12,15 +12,15 @@
 // get the same 401 and body. Codes may be pasted; spaces and dashes are ignored.
 
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "@/db";
-import { staffUsers, type StaffUser } from "@/db/schema";
+import { staffUsers } from "@/db/schema";
 import { fail, ok } from "./envelope";
 import type { Db } from "./idempotency";
-import { clientIp, rateLimit } from "./rate-limit";
+import { clientIp, limitKey, rateLimit } from "./rate-limit";
 import { publicUser } from "./staff-login";
 import { accountLocked, clearAccountFailures, pairLocked, recordAccountFailure, recordPairFailure } from "./staff-lockout";
-import { MfaNotConfigured, checkMfaCode, issueBackupCodes, startEnrolment, verifyTotp } from "./staff-mfa";
+import { MfaNotConfigured, MfaSecretUnreadable, checkMfaCode, issueBackupCodes, normalizeCode, startEnrolment, verifyTotp } from "./staff-mfa";
 import { stepUpFresh, stepUpNeeded } from "./admin-auth";
 import { STEP_UP_MS } from "./staff-permissions";
 import {
@@ -73,8 +73,16 @@ async function begin(
   return { session, code };
 }
 
-/** Run `check` unless locked; count a failure like a wrong passphrase. */
-async function guarded(request: Request, user: StaffUser, check: () => Promise<boolean>): Promise<boolean> {
+/**
+ * Run `check` unless locked. A failure counts like a wrong passphrase (account
+ * + IP pair and the account backstop) and, on a pre-MFA session (mfa_pending /
+ * enrol_only), against that session: the 5th wrong code (RATE_LIMITS.staffMfaSession) ends it, so a stolen pending
+ * cookie cannot be used to keep guessing from many IPs.
+ * shortcut: the per-session count is in process memory like the other limits;
+ * the revoke itself is in D1. Move the count to D1 if more than one instance runs.
+ */
+async function guarded(request: Request, step: Step, check: () => Promise<boolean>): Promise<boolean> {
+  const { user, sessionId, stage } = step.session;
   const ip = clientIp(request);
   const now = Date.now();
   if (pairLocked(request, user.id, ip) || accountLocked(user.lockedUntil, now)) return false;
@@ -82,6 +90,10 @@ async function guarded(request: Request, user: StaffUser, check: () => Promise<b
   if (!passed) {
     recordPairFailure(request, user.id, ip);
     await recordAccountFailure(db(), user.id, now);
+    if (stage !== "full") {
+      limitKey(request, "staffMfaSession", sessionId, "-");
+      if (limitKey(request, "staffMfaSession", sessionId, "-", { count: false })) await revokeSession(sessionId);
+    }
   }
   return passed;
 }
@@ -99,6 +111,7 @@ async function run(requestId: string, body: () => Promise<Response>): Promise<Re
     return await body();
   } catch (e) {
     if (e instanceof MfaNotConfigured) return fail({ code: "dependency_unavailable", message: e.message, requestId });
+    if (e instanceof MfaSecretUnreadable) return fail({ code: "internal_error", message: e.message, requestId });
     return fail({ code: "dependency_unavailable", message: "Staff account store is unavailable.", requestId });
   }
 }
@@ -107,7 +120,7 @@ export function loginMfa(request: Request, requestId: string): Promise<Response>
   return run(requestId, async () => {
     const step = await begin(request, requestId, ["mfa_pending"], true);
     if (step instanceof Response) return step;
-    const passed = await guarded(request, step.session.user, () => checkMfaCode(step.session.user, step.code));
+    const passed = await guarded(request, step, () => checkMfaCode(step.session.user, step.code));
     if (!passed) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
     const cookie = await upgrade(request, step);
     return ok({ user: publicUser(step.session.user) }, { requestId, headers: { "Set-Cookie": cookie, ...NO_STORE } });
@@ -119,7 +132,10 @@ export function mfaSetup(request: Request, requestId: string): Promise<Response>
     const step = await begin(request, requestId, ["enrol_only", "full"], false);
     if (step instanceof Response) return step;
     if (step.session.user.mfaEnabledAt) return fail({ code: "conflict", message: "MFA is already on for this account.", requestId });
-    const { secret, otpauthUri } = await startEnrolment(step.session.user);
+    const started = await startEnrolment(step.session.user);
+    // Turned on by a parallel request between the read and the UPDATE.
+    if (!started) return fail({ code: "conflict", message: "MFA is already on for this account.", requestId });
+    const { secret, otpauthUri } = started;
     return ok({ otpauthUri, secret }, { requestId, headers: NO_STORE });
   });
 }
@@ -131,9 +147,16 @@ export function mfaVerify(request: Request, requestId: string): Promise<Response
     const user = step.session.user;
     // No set-up in progress is answered like a wrong code.
     if (user.mfaEnabledAt || !user.mfaSecretEnc) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
-    const passed = await guarded(request, user, () => verifyTotp(user, step.code.replace(/\s/g, "")));
+    const passed = await guarded(request, step, () => verifyTotp(user, normalizeCode(step.code)));
     if (!passed) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
-    await db().update(staffUsers).set({ mfaEnabledAt: new Date().toISOString() }).where(eq(staffUsers.id, user.id));
+    // Atomic: only if MFA is still off AND the secret is the one just checked
+    // (a parallel setup may have replaced it), so the app and the DB agree.
+    const enabled = await db()
+      .update(staffUsers)
+      .set({ mfaEnabledAt: new Date().toISOString() })
+      .where(and(eq(staffUsers.id, user.id), isNull(staffUsers.mfaEnabledAt), eq(staffUsers.mfaSecretEnc, user.mfaSecretEnc)))
+      .returning({ id: staffUsers.id });
+    if (enabled.length !== 1) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
     const backupCodes = await issueBackupCodes(user.id);
     const cookie = await upgrade(request, step);
     return ok({ user: publicUser(user), backupCodes }, { requestId, headers: { "Set-Cookie": cookie, ...NO_STORE } });
@@ -154,7 +177,7 @@ export function mfaStepUp(request: Request, requestId: string): Promise<Response
   return run(requestId, async () => {
     const step = await begin(request, requestId, ["full"], true);
     if (step instanceof Response) return step;
-    const passed = await guarded(request, step.session.user, () => checkMfaCode(step.session.user, step.code));
+    const passed = await guarded(request, step, () => checkMfaCode(step.session.user, step.code));
     if (!passed) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
     await markMfaVerified(step.session.sessionId);
     return ok({ verifiedUntil: new Date(Date.now() + STEP_UP_MS).toISOString() }, { requestId, headers: NO_STORE });

@@ -34,6 +34,13 @@ export class MfaNotConfigured extends Error {
   }
 }
 
+/** The stored secret cannot be decrypted: the key changed or the row is damaged. */
+export class MfaSecretUnreadable extends Error {
+  constructor() {
+    super("MFA for this account cannot be checked. Ask the owner to reset MFA for this account.");
+  }
+}
+
 function keyMaterial(): string {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
   const key = env.USAM_MFA_ENCRYPTION_KEY;
@@ -124,15 +131,21 @@ export async function encryptSecret(secretBase32: string, userId: number): Promi
   return `v1:${b64(iv)}:${b64(new Uint8Array(ct))}`;
 }
 
+/** Throws MfaNotConfigured (no key) or MfaSecretUnreadable (wrong key, bad data). */
 export async function decryptSecret(stored: string, userId: number): Promise<string> {
-  const [version, iv, ct] = stored.split(":");
-  if (version !== "v1" || !iv || !ct) throw new Error("Unknown MFA secret format");
-  const plain = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: unb64(iv) as BufferSource, additionalData: enc.encode(`staff:${userId}`) },
-    await subKey("aes"),
-    unb64(ct) as BufferSource,
-  );
-  return new TextDecoder().decode(plain);
+  const key = await subKey("aes"); // MfaNotConfigured passes through
+  try {
+    const [version, iv, ct] = stored.split(":");
+    if (version !== "v1" || !iv || !ct) throw new Error("format");
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: unb64(iv) as BufferSource, additionalData: enc.encode(`staff:${userId}`) },
+      key,
+      unb64(ct) as BufferSource,
+    );
+    return new TextDecoder().decode(plain);
+  } catch {
+    throw new MfaSecretUnreadable();
+  }
 }
 
 /**
@@ -140,10 +153,17 @@ export async function decryptSecret(stored: string, userId: number): Promise<str
  * Returns the secret and otpauth URI; they are shown once and never again.
  * Throws MfaNotConfigured when the encryption key is missing.
  */
-export async function startEnrolment(user: StaffUser): Promise<{ secret: string; otpauthUri: string }> {
+export async function startEnrolment(user: StaffUser): Promise<{ secret: string; otpauthUri: string } | null> {
   const secret = base32Encode(crypto.getRandomValues(new Uint8Array(20)));
   const stored = await encryptSecret(secret, user.id);
-  await db().update(staffUsers).set({ mfaSecretEnc: stored, mfaEnabledAt: null, mfaLastStep: 0 }).where(eq(staffUsers.id, user.id));
+  // Atomic: only while MFA is off, so a repeated or parallel setup can never
+  // replace the secret of (or un-enrol) a user who already turned MFA on.
+  const updated = await db()
+    .update(staffUsers)
+    .set({ mfaSecretEnc: stored, mfaLastStep: 0 })
+    .where(and(eq(staffUsers.id, user.id), isNull(staffUsers.mfaEnabledAt)))
+    .returning({ id: staffUsers.id });
+  if (updated.length !== 1) return null; // MFA already on
   return { secret, otpauthUri: otpauthUri(user.email, secret) };
 }
 
@@ -176,9 +196,17 @@ function equalCodes(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Spaces and dashes are ignored, case too (codes are often pasted). */
+/**
+ * Spaces and dashes are ignored, case too (codes are often pasted).
+ * Arabic-Indic (U+0660-0669) and Eastern Arabic-Indic (U+06F0-06F9) digits
+ * become 0-9, so a code typed on an Arabic keyboard works.
+ */
 export function normalizeCode(code: string): string {
-  return code.replace(/[\s-]/g, "").toUpperCase();
+  return code
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\s-]/g, "")
+    .toUpperCase();
 }
 
 async function backupHash(normalized: string): Promise<string> {

@@ -22,6 +22,8 @@ export const RATE_LIMITS = {
   // MFA code and enrolment requests (L-A1b), per IP. Failed codes also count
   // in staffLoginPair and the account backstop, like a wrong passphrase.
   staffMfa: { limit: 10, windowMs: 15 * 60_000 },
+  // Wrong codes per pre-MFA session; the 5th ends the session (staff-mfa-flow.ts).
+  staffMfaSession: { limit: 5, windowMs: 15 * 60_000 },
 } satisfies Record<string, RateLimitRule>;
 
 export type LimitName = keyof typeof RATE_LIMITS;
