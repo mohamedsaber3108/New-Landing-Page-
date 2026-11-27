@@ -107,6 +107,11 @@ export class FakeStore {
       if (row.id == null) row.id = ++this.seq[table];
     }
     if (row.createdAt == null) row.createdAt = new Date().toISOString();
+    if (table === "outbox_events") {
+      // Mirror the schema column defaults.
+      row.attempts ??= 0;
+      row.nextAttemptAt ??= row.createdAt;
+    }
     this.tables[table].push(row);
     return row;
   }
