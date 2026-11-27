@@ -16,6 +16,8 @@
 // change can invalidate a stale choice. It is itself "necessary" storage
 // (remembering a legal choice), described in the Cookie Policy.
 
+import { clearLocaleCookie } from "./locale";
+
 export type ConsentCategory = "necessary" | "functional" | "analytics" | "marketing";
 
 export type OptionalCategory = Exclude<ConsentCategory, "necessary">;
@@ -114,8 +116,11 @@ export const STORAGE_ITEMS = [
     key: "usam-locale",
     kind: "functional" as const,
     purpose: { en: "Remembers your language choice (English/Arabic).", ar: "يتذكّر اختيارك للّغة (العربية/الإنجليزية)." },
-    storage: { en: "Local storage (this browser)", ar: "التخزين المحلي (هذا المتصفح)" },
-    duration: { en: "Until you clear it", ar: "حتى تقوم بمسحه" },
+    storage: {
+      en: "Local storage, plus a first-party cookie (a necessary and functional preference, set after you choose a language or when a saved language is restored)",
+      ar: "التخزين المحلي، وملف ارتباط من الموقع نفسه (تفضيل ضروري ووظيفي، يُضبط بعد اختيارك للّغة أو عند استعادة لغة محفوظة)",
+    },
+    duration: { en: "Until you clear it (cookie: 1 year)", ar: "حتى تقوم بمسحه (ملف الارتباط: سنة واحدة)" },
   },
   {
     key: "usam-theme",
@@ -154,6 +159,8 @@ export function resetSavedPreferences(): string[] {
       /* storage disabled; nothing to remove */
     }
   }
+  // The server-readable language cookie is part of the same preference.
+  clearLocaleCookie();
   return removed;
 }
 

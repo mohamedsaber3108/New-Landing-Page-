@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ENQUIRY_KINDS, ENQUIRY_PRODUCTS } from "@/db/schema";
+import { isolateLtr } from "./bidi";
 import { AcceptanceFields, useLegalRequirements } from "./legal-acceptance";
 
 type Locale = "en" | "ar";
@@ -155,7 +156,7 @@ export function ContactLeadForm({ locale }: { locale: Locale }) {
       <p className="lead-intro">{L.intro}</p>
       {state.kind === "error" && (
         <p className="lead-error" role="alert">
-          <strong>{L.errorTitle}:</strong> {state.message}
+          <strong>{L.errorTitle}:</strong> {isolateLtr(state.message)}
         </p>
       )}
       <form onSubmit={handleSubmit} noValidate>
