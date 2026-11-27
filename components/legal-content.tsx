@@ -12,6 +12,7 @@
 
 import Link from "./nav-link";
 import { useEffect, useState } from "react";
+import { isolateLtr } from "./bidi";
 import {
   LEGAL_CENTER_ORDER,
   LEGAL_FRAMEWORKS,
@@ -103,7 +104,7 @@ function Paragraph({ text }: { text: string }) {
         tok.kind === "link" ? (
           <Link key={i} href={tok.href}>{tok.label}</Link>
         ) : (
-          <span key={i}>{tok.text}</span>
+          <span key={i}>{isolateLtr(tok.text)}</span>
         ),
       )}
     </p>

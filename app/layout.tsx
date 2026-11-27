@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./research-landing.css";
 import { siteUrl } from "@/lib/site";
+import { dirFor } from "@/lib/locale";
+import { requestLocale } from "@/lib/request-locale";
+
+// Every page depends on the locale cookie: never prerender at build time.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -21,13 +26,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Server-rendered from the usam-locale cookie; unknown -> lang=en dir=ltr.
+  const locale = await requestLocale();
   return (
-    <html lang="en" dir="ltr">
+    <html lang={locale} dir={dirFor(locale)}>
       <body className="antialiased">{children}</body>
     </html>
   );

@@ -19,6 +19,7 @@ import {
   TIMELINE_OPTIONS,
 } from "@/db/schema";
 import { AcceptanceFields, useLegalRequirements } from "./legal-acceptance";
+import { isolateLtr } from "./bidi";
 
 type Locale = "en" | "ar";
 type Variant = "enterprise" | "government";
@@ -216,7 +217,7 @@ export function EnquiryForm({ locale, variant }: { locale: Locale; variant: Vari
       <h2>{V.heading}</h2>
       <p className="lead-intro">{V.intro}</p>
       {state.kind === "error" && (
-        <p className="lead-error" role="alert"><strong>{C.errorTitle}:</strong> {state.message}</p>
+        <p className="lead-error" role="alert"><strong>{C.errorTitle}:</strong> {isolateLtr(state.message)}</p>
       )}
       <form onSubmit={handleSubmit} noValidate>
         <div className="enquiry-grid">

@@ -12,6 +12,7 @@
 
 import { useRef, useState } from "react";
 import { PRIVACY_REQUEST_TYPES } from "@/db/schema";
+import { isolateLtr } from "./bidi";
 import Link from "./nav-link";
 
 type Locale = "en" | "ar";
@@ -142,7 +143,7 @@ export function PrivacyRequestForm({ locale }: { locale: Locale }) {
       <p className="lead-intro">{L.intro}</p>
       {state.kind === "error" && (
         <p className="lead-error" role="alert">
-          <strong>{L.errorTitle}:</strong> {state.message}
+          <strong>{L.errorTitle}:</strong> {isolateLtr(state.message)}
         </p>
       )}
       <form onSubmit={handleSubmit} noValidate>
@@ -165,7 +166,7 @@ export function PrivacyRequestForm({ locale }: { locale: Locale }) {
         <label>
           {L.related}
           <input name="relatedReference" type="text" maxLength={60} />
-          <span className="lead-hint">{L.relatedHint}</span>
+          <span className="lead-hint">{isolateLtr(L.relatedHint)}</span>
         </label>
         <label>
           {L.message}
