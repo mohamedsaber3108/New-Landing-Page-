@@ -486,3 +486,47 @@ export const policyPublications = sqliteTable(
 
 export type PolicyPublication = typeof policyPublications.$inferSelect;
 export type NewPolicyPublication = typeof policyPublications.$inferInsert;
+
+/**
+ * Staff accounts for the admin API (L-A1a). Owner default for Q10: own
+ * accounts in D1. Three roles only (Q18). No seed rows: the first Super Admin
+ * is created on the server with scripts/create-staff.mjs.
+ */
+export const STAFF_ROLES = ["super_admin", "admin", "lead_inbox_agent"] as const;
+
+export const staffUsers = sqliteTable(
+  "staff_users",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // Stored lower-case.
+    email: text("email").notNull(),
+    displayName: text("display_name").notNull(),
+    role: text("role").notNull(),
+    // "pbkdf2-sha256$<iterations>$<salt b64>$<hash b64>" (lib/api/staff-password.ts)
+    passwordHash: text("password_hash").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    disabledAt: text("disabled_at"),
+    failedCount: integer("failed_count").notNull().default(0),
+    lockedUntil: text("locked_until"),
+  },
+  (table) => [uniqueIndex("staff_users_email_uq").on(table.email)],
+);
+
+/** Staff sessions. `id` is the SHA-256 of the cookie value; the raw value is never stored. */
+export const staffSessions = sqliteTable(
+  "staff_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    lastSeenAt: text("last_seen_at").notNull(),
+    // Absolute end (created + 8 h). Logout sets it to the logout time.
+    expiresAt: text("expires_at").notNull(),
+    ipHash: text("ip_hash"),
+    userAgent: text("user_agent"),
+  },
+  (table) => [index("staff_sessions_user_idx").on(table.userId)],
+);
+
+export type StaffUser = typeof staffUsers.$inferSelect;
+export type StaffSession = typeof staffSessions.$inferSelect;

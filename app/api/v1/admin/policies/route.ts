@@ -10,6 +10,7 @@
 
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
 import { authorizeAdmin } from "@/lib/api/admin-auth";
+import { ROUTE_PERMISSIONS } from "@/lib/api/staff-permissions";
 import { z } from "zod";
 import { listPolicyHistory, listPolicyOverview, publishPolicy, resolvePolicy } from "@/lib/legal/store";
 import { POLICY_TYPES, type Locale, type PolicyType } from "@/lib/legal/policies";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const requestId = newRequestId();
-  const denied = authorizeAdmin(request, requestId);
+  const denied = await authorizeAdmin(request, requestId, ROUTE_PERMISSIONS["GET /api/v1/admin/policies"]);
   if (denied) return denied;
 
   const url = new URL(request.url);
@@ -56,7 +57,7 @@ const publishSchema = z.object({
 
 export async function POST(request: Request) {
   const requestId = newRequestId();
-  const denied = authorizeAdmin(request, requestId);
+  const denied = await authorizeAdmin(request, requestId, ROUTE_PERMISSIONS["POST /api/v1/admin/policies"]);
   if (denied) return denied;
 
   let raw: unknown;

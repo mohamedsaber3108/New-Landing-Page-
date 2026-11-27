@@ -36,6 +36,13 @@
       "when": 1791926178776,
       "tag": "0004_serious_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795793517820,
+      "tag": "0005_cool_bullseye",
+      "breakpoints": true
     }
   ]
 }
