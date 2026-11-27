@@ -16,22 +16,55 @@ feedback).
 
 ## Quick start
 
-Requires Node.js `>=22.13`.
+Requires Node.js `>=22.13` and npm 10.
 
+### Run locally
 ```bash
 npm ci            # install from the locked dependency set
-npm run dev       # start the dev server (Vinext + HMR)
+npm run dev       # dev server (Vinext + HMR) on http://localhost:5173
 ```
+Pages work right away. The lead, privacy-request and feedback forms need the
+local D1 tables. Without them they answer `503 dependency_unavailable`.
+1. Start `npm run dev` once, so the local D1 file is created under
+   `.wrangler/state/v3/d1/`, then stop it.
+2. Apply each migration in order, **from the repo root**. The script uses a
+   relative `.wrangler/state` path.
+   ```bash
+   node scripts/apply-migration-local.mjs drizzle/0000_glorious_franklin_storm.sql
+   node scripts/apply-migration-local.mjs drizzle/0001_plain_khan.sql
+   node scripts/apply-migration-local.mjs drizzle/0002_glossy_kid_colt.sql
+   node scripts/apply-migration-local.mjs drizzle/0003_tan_magneto.sql
+   node scripts/apply-migration-local.mjs drizzle/0004_serious_chamber.sql
+   ```
+3. Start `npm run dev` again.
 
-Then open the local address the dev server prints.
+Optional settings (admin token and notify channels): copy
+[`.env.example`](.env.example) to `./.dev.vars` and fill in values. Never commit it.
 
+### Test and check (same as CI)
 ```bash
-npx tsc --noEmit  # type-check
-npm run build     # production build (Cloudflare artifact)
-npm start         # preview the built Worker locally (D1/R2 aware)
-npm test          # run the vitest suite
-npm run db:generate   # generate a Drizzle migration after schema changes
+npm run lint      # must have 0 errors (warnings allowed)
+npx tsc --noEmit  # type-check, must be clean
+npm test          # vitest suite (fake DB, no D1 needed)
+npm run build     # production build (Cloudflare artifact in dist/)
+npm audit --omit=dev --audit-level=high   # dependency scan used in CI
 ```
+Other: `npm start` previews the built Worker locally. `npm run db:generate`
+makes a Drizzle migration after schema changes.
+
+### Deploy (server)
+Production runs `npm start` (`wrangler dev --local`, Miniflare) as the systemd
+service `usam`, behind nginx. Full steps, backup and rollback are in
+[`docs/USAM-legal-deploy-runbook.md`](docs/USAM-legal-deploy-runbook.md). In short:
+1. Back up the D1 sqlite and note the current commit.
+2. `git pull --ff-only origin main`, then `rm -rf dist .vinext`, `npm ci`, `npm run build`.
+3. Stop the service, apply only the new migrations with
+   `scripts/apply-migration-local.mjs`, then start the service.
+4. Secrets live in `~/.usam/dev.vars` (names in `.env.example`). `npm start`
+   stages them into `dist/server/.dev.vars`. Miniflare does not read the
+   systemd environment, so a systemd `Environment=` line is not enough.
+5. nginx must send `proxy_set_header X-Real-IP $remote_addr;` (used by the
+   rate limits from PR #4).
 
 ---
 
@@ -79,14 +112,21 @@ evidence-backed state of every route and the remaining / blocked work.
 
 ## Configuration interface
 
-Set via environment; **no secrets are committed**. Missing integrations produce a
-`not_configured` / disabled state and never fake success.
+Names are listed in [`.env.example`](.env.example) (no values). Values go in a
+`KEY=VALUE` file (`~/.usam/dev.vars` on the server, `./.dev.vars` locally),
+which `npm start` stages for Miniflare. **No secrets are committed.** Missing
+integrations produce a `not_configured` / disabled state and never fake success.
 
 | Variable | Effect |
 |----------|--------|
-| `USAM_LEAD_NOTIFY_WEBHOOK` | Enables webhook delivery of lead-notification outbox events. |
-| `USAM_LEAD_NOTIFY_EMAIL` | Marks an email channel (provider wiring is a gated task). |
-| `USAM_ADMIN_TOKEN` | Required for the admin outbox endpoint; unset = admin disabled. |
+| `USAM_ADMIN_TOKEN` | Required for every `/api/v1/admin/*` endpoint; unset = admin disabled (403). Random, 32+ characters, rotated when staff change. |
+| `USAM_LEAD_NOTIFY_WEBHOOK` | Optional. Enables webhook delivery of lead-notification outbox events. |
+| `USAM_LEAD_NOTIFY_EMAIL` | Optional. Marks an email channel (provider wiring is a gated task). |
+| `USAM_SITE_URL` | Optional. Public origin for sitemap/robots; default `https://usamif.com`. |
+| `USAM_TRUST_CF_CONNECTING_IP` | Optional, lands with PR #4. `1` = trust `CF-Connecting-IP` as client IP; only if the origin accepts Cloudflare traffic alone. |
+| `USAM_DEV_VARS_FILE` | Optional, launcher only. Path of the secrets file to stage instead of the defaults. |
+
+The database is the D1 binding `DB` (`.openai/hosting.json`), not a variable.
 
 ---
 
