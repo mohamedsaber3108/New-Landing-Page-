@@ -21,7 +21,7 @@ import {
   type Locale,
   type PolicyType,
 } from "@/lib/legal/policies";
-import { products, trustedDomain } from "@/data/products";
+import { products, trustedDomain, type ProductId } from "@/data/products";
 import { parseInlineLinks } from "@/lib/legal/inline-links";
 import { CookieSettingsPanel, openCookieSettings } from "./cookie-consent";
 import { PrivacyRequestForm } from "./privacy-request-form";
@@ -116,6 +116,11 @@ type PublicDoc = Omit<LocalPolicy, "approval" | "sections"> & {
   sections: ShownSection[];
 };
 
+/** Shape of `data` from GET /api/v1/legal/:type (every field optional). */
+type PolicyApiData = Partial<Omit<PublicDoc, "sections">> & {
+  sections?: Array<{ id: string; title: string; body: string }>;
+};
+
 /**
  * Normalize a policy for public display. The baseline content is finished,
  * user-facing text with no internal markers, so this simply shows every
@@ -155,7 +160,9 @@ export function LegalCenter({ locale }: { locale: Locale }) {
     Promise.all(
       LEGAL_CENTER_ORDER.map((type) =>
         fetch(`/api/v1/legal/${type}?locale=${locale}`)
-          .then((r) => (r.ok ? r.json() : null))
+          .then((r) =>
+            r.ok ? (r.json() as Promise<{ data?: { published?: boolean; version?: string | null } }>) : null,
+          )
           .then((json) => [type, json?.data] as const)
           .catch(() => [type, null] as const),
       ),
@@ -231,7 +238,7 @@ export function LegalPolicy({ type, locale }: { type: PolicyType; locale: Locale
     if (!baseline) return;
     let active = true;
     fetch(`/api/v1/legal/${type}?locale=${locale}`)
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? (r.json() as Promise<{ data?: PolicyApiData }>) : null))
       .then((json) => {
         if (!active || !json?.data) return;
         const d = json.data;

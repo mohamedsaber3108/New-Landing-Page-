@@ -25,12 +25,10 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
-      # REPORT-ONLY until prompt 002 clears existing findings (8 lint errors, 6 tsc errors).
-      - name: Lint (report-only)
-        continue-on-error: true
+      # Blocking since prompt 002: lint errors fail CI (warnings do not).
+      - name: Lint
         run: npm run lint
-      - name: Type check (report-only)
-        continue-on-error: true
+      - name: Type check
         run: npx tsc --noEmit
       - name: Tests (vitest, fake DB, not D1)
         run: npm test -- --reporter=verbose
