@@ -7,8 +7,9 @@
 //
 //   - If no channel is configured (no USAM_LEAD_NOTIFY_* env), the worker is a
 //     no-op and reports `disabled`. Events stay `pending` and are never lost.
-//   - If a webhook is configured, it POSTs each event, with bounded retries and
-//     dead-lettering. (Email delivery is left as a documented integration point;
+//   - If a webhook is configured, it POSTs one short message per event
+//     ({ id, type, text }, see notificationMessage: no personal data), with
+//     bounded retries and dead-lettering. (Email delivery is left as a documented integration point;
 //     wiring a provider is a GATED task requiring credentials.)
 //
 // This module performs no automatic scheduling. It is driven explicitly (an
@@ -117,15 +118,13 @@ export async function processOutboxBatch(opts: { limit?: number } = {}): Promise
     try {
       const response = await fetch(channel.url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId: event.eventId,
-          eventType: event.eventType,
-          schemaVersion: event.schemaVersion,
-          occurredAt: event.createdAt,
-          aggregateRef: event.aggregateRef,
-          data: safeJson(event.payload),
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          // Lets the receiver drop a duplicate if a retry follows a lost reply.
+          "X-USAM-Event-Id": event.eventId,
+        },
+        body: JSON.stringify(notificationMessage(event)),
+        signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) throw new Error(`delivery responded ${response.status}`);
 
@@ -161,10 +160,21 @@ export async function processOutboxBatch(opts: { limit?: number } = {}): Promise
   };
 }
 
-function safeJson(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return {};
-  }
+export type NotificationMessage = { id: string; type: string; text: string };
+
+const NOTE_BY_TYPE: Record<string, string> = {
+  "lead.created": "New enquiry. Staff can view it in the admin leads list.",
+  "privacy_request.created": "New privacy request. Staff can view it in the admin privacy-requests list.",
+};
+
+/**
+ * The ONLY data sent to the notification channel (OD-05 A): the public
+ * reference, the event type and a fixed note. Never the enquiry text, name,
+ * email, phone or any other payload field. shortcut: no link yet, because the
+ * admin API needs a header; add one when the Lead Inbox page exists.
+ */
+export function notificationMessage(event: { eventType: string; aggregateRef: string | null }): NotificationMessage {
+  const id = event.aggregateRef ?? "unknown";
+  const note = NOTE_BY_TYPE[event.eventType] ?? "New event.";
+  return { id, type: event.eventType, text: `${note} Reference: ${id}` };
 }
