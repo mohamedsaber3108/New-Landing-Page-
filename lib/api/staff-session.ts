@@ -85,23 +85,46 @@ export async function keyedIpHash(ip: string | null): Promise<string | null> {
   return toHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(ip)));
 }
 
+/** L-A1b session stages; see db/schema.ts staffSessions.stage. */
+export type SessionStage = "full" | "mfa_pending" | "enrol_only";
+/** Lifetime of the "waiting for the MFA code" and "set up MFA" stages. */
+export const PENDING_MFA_MS = 5 * 60_000;
+export const ENROL_ONLY_MS = 15 * 60_000;
+
+export function stageLifetimeMs(stage: SessionStage): number {
+  return stage === "mfa_pending" ? PENDING_MFA_MS : stage === "enrol_only" ? ENROL_ONLY_MS : SESSION_ABSOLUTE_MS;
+}
+
 /** Create a session for `user`; returns the cookie value (raw, only in the Set-Cookie). */
-export async function createSession(user: StaffUser, request: Request, ip: string | null): Promise<string> {
+export async function createSession(
+  user: StaffUser,
+  request: Request,
+  ip: string | null,
+  opts: { stage?: SessionStage; mfaVerified?: boolean } = {},
+): Promise<string> {
   const token = randomToken();
   const now = Date.now();
+  const stage = opts.stage ?? "full";
   await db().insert(staffSessions).values({
     id: await sha256Hex(token),
     userId: user.id,
     createdAt: new Date(now).toISOString(),
     lastSeenAt: new Date(now).toISOString(),
-    expiresAt: new Date(now + SESSION_ABSOLUTE_MS).toISOString(),
+    expiresAt: new Date(now + stageLifetimeMs(stage)).toISOString(),
     ipHash: await keyedIpHash(ip),
     userAgent: (request.headers.get("user-agent") ?? "").slice(0, 120) || null,
+    stage,
+    mfaVerifiedAt: opts.mfaVerified ? new Date(now).toISOString() : null,
   });
   return token;
 }
 
-export type ActiveSession = { sessionId: string; user: StaffUser };
+/** Record a successful MFA check in this session (step-up). */
+export async function markMfaVerified(sessionId: string): Promise<void> {
+  await db().update(staffSessions).set({ mfaVerifiedAt: new Date().toISOString() }).where(eq(staffSessions.id, sessionId));
+}
+
+export type ActiveSession = { sessionId: string; user: StaffUser; stage: SessionStage; mfaVerifiedAt: string | null };
 
 /** The live session for this request, or null (missing, unknown, idle, expired, user disabled). */
 export async function getSession(request: Request): Promise<ActiveSession | null> {
@@ -123,7 +146,7 @@ export async function getSession(request: Request): Promise<ActiveSession | null
       .set({ lastSeenAt: new Date(now).toISOString() })
       .where(and(eq(staffSessions.id, id)));
   }
-  return { sessionId: id, user };
+  return { sessionId: id, user, stage: (session.stage ?? "full") as SessionStage, mfaVerifiedAt: session.mfaVerifiedAt ?? null };
 }
 
 /** End a session now (logout). Rows are kept until a cleanup job exists. */

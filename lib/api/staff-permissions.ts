@@ -48,6 +48,21 @@ export const ROLE_PERMISSIONS: Record<StaffRole, readonly Permission[]> = {
   lead_inbox_agent: ["leads:view", "leads:assign", "leads:update-status"],
 };
 
+/** L-A1b (ADMIN.md s.6): these roles must use MFA; until set up they may only enrol. */
+export const MFA_REQUIRED_ROLES: readonly StaffRole[] = ["super_admin", "admin"];
+
+export function mfaRequired(role: string): boolean {
+  return (MFA_REQUIRED_ROLES as readonly string[]).includes(role);
+}
+
+/**
+ * Sensitive actions (ADMIN.md s.5) need an MFA check in this session within
+ * STEP_UP_MS, enforced in authorizeAdmin(). Today only policy publish exists;
+ * add exports, role changes and key/flag changes here when their routes land.
+ */
+export const STEP_UP_PERMISSIONS: readonly Permission[] = ["policies:publish"];
+export const STEP_UP_MS = 5 * 60_000;
+
 export function roleHas(role: string, permission: Permission): boolean {
   return (ROLE_PERMISSIONS as Record<string, readonly Permission[] | undefined>)[role]?.includes(permission) ?? false;
 }

@@ -120,6 +120,7 @@ integrations produce a `not_configured` / disabled state and never fake success.
 | Variable | Effect |
 |----------|--------|
 | `USAM_ADMIN_TOKEN` | Required for every `/api/v1/admin/*` endpoint; unset = admin disabled (403). Random, 32+ characters, rotated when staff change. |
+| `USAM_MFA_ENCRYPTION_KEY` | Staff MFA (TOTP secrets encrypted with AES-GCM, backup-code hashes). Random, 32+ characters. Unset = MFA set-up and MFA sign-in refused (503). Changing it voids all enrolments. |
 | `USAM_LEAD_NOTIFY_WEBHOOK` | Optional. Enables webhook delivery of lead-notification outbox events. |
 | `USAM_LEAD_NOTIFY_EMAIL` | Optional. Marks an email channel (provider wiring is a gated task). |
 | `USAM_SITE_URL` | Optional. Public origin for sitemap/robots; default `https://usamif.com`. |

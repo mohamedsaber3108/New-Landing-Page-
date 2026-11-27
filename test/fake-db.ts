@@ -14,7 +14,7 @@
 // code builds. This is enough to test idempotency races, replay, body-mismatch
 // conflicts, and the lead+outbox transactional write without native modules.
 
-import { consentEvents, enquiries, idempotencyKeys, outboxEvents, policyPublications, privacyRequests, staffSessions, staffUsers } from "@/db/schema";
+import { consentEvents, enquiries, idempotencyKeys, outboxEvents, policyPublications, privacyRequests, staffBackupCodes, staffSessions, staffUsers } from "@/db/schema";
 
 type Row = Record<string, unknown>;
 
@@ -23,6 +23,7 @@ type Pred =
   | { kind: "eq"; col: ColRef; value: unknown }
   | { kind: "lt"; col: ColRef; value: unknown }
   | { kind: "lte"; col: ColRef; value: unknown }
+  | { kind: "isNull"; col: ColRef }
   | { kind: "and"; parts: Pred[] };
 type ColRef = { _table: string; _name: string };
 
@@ -53,6 +54,7 @@ function ensureRegistry() {
   register("privacy_requests", privacyRequests as unknown as Record<string, unknown>);
   register("staff_users", staffUsers as unknown as Record<string, unknown>);
   register("staff_sessions", staffSessions as unknown as Record<string, unknown>);
+  register("staff_backup_codes", staffBackupCodes as unknown as Record<string, unknown>);
   registryBuilt = true;
 }
 
@@ -72,6 +74,7 @@ function tableKey(table: unknown): string {
   if (table === privacyRequests) return "privacy_requests";
   if (table === staffUsers) return "staff_users";
   if (table === staffSessions) return "staff_sessions";
+  if (table === staffBackupCodes) return "staff_backup_codes";
   throw new Error("Unknown table");
 }
 
@@ -87,12 +90,13 @@ function uniqueKey(table: string, row: Row): string | null {
 }
 
 export class FakeStore {
-  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [] };
-  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0, consent_events: 0, policy_publications: 0, privacy_requests: 0, staff_users: 0 };
+  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [], staff_backup_codes: [] };
+  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0, consent_events: 0, policy_publications: 0, privacy_requests: 0, staff_users: 0, staff_backup_codes: 0 };
 
   private matches(table: string, row: Row, pred: Pred): boolean {
     if (pred.kind === "and") return pred.parts.every((p) => this.matches(table, row, p));
     const { name } = colName(pred.col);
+    if (pred.kind === "isNull") return row[name] == null;
     if (pred.kind === "lt") return (row[name] as number) < (pred.value as number);
     // Same as SQLite text comparison for ISO timestamps.
     if (pred.kind === "lte") return String(row[name]) <= String(pred.value);
@@ -112,7 +116,8 @@ export class FakeStore {
       table === "consent_events" ||
       table === "policy_publications" ||
       table === "privacy_requests" ||
-      table === "staff_users"
+      table === "staff_users" ||
+      table === "staff_backup_codes"
     ) {
       if (row.id == null) row.id = ++this.seq[table];
     }

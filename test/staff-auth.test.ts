@@ -7,6 +7,7 @@ vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, value: unknown) => ({ kind: "eq", col, value }),
   lt: (col: unknown, value: unknown) => ({ kind: "lt", col, value }),
   lte: (col: unknown, value: unknown) => ({ kind: "lte", col, value }),
+  isNull: (col: unknown) => ({ kind: "isNull", col }),
   and: (...parts: unknown[]) => ({ kind: "and", parts }),
   asc: (c: unknown) => c,
   desc: (c: unknown) => c,
@@ -22,6 +23,8 @@ import * as outboxRoute from "@/app/api/v1/admin/outbox/process/route";
 import * as policiesRoute from "@/app/api/v1/admin/policies/route";
 import * as privacyRoute from "@/app/api/v1/admin/privacy-requests/route";
 import { POST as loginPOST } from "@/app/api/v1/admin/auth/login/route";
+import { POST as loginMfaPOST } from "@/app/api/v1/admin/auth/login/mfa/route";
+import { base32Encode, encryptSecret, totp } from "@/lib/api/staff-mfa";
 import { POST as logoutPOST } from "@/app/api/v1/admin/auth/logout/route";
 import { GET as meGET } from "@/app/api/v1/admin/auth/me/route";
 import { resetRateLimits } from "@/lib/api/rate-limit";
@@ -50,9 +53,18 @@ function req(path: string, init: { method?: string; cookie?: string; origin?: st
   });
 }
 
+// L-A1b: super_admin and admin must use MFA, so their test accounts have it on.
+const SECRETS: Record<string, string> = {};
 async function addUser(email: string, role: string, extra: Record<string, unknown> = {}) {
+  const id = store.tables.staff_users.length + 1;
+  let mfa: Record<string, unknown> = { mfaSecretEnc: null, mfaEnabledAt: null, mfaLastStep: 0 };
+  if (role === "super_admin" || role === "admin") {
+    SECRETS[email] = base32Encode(crypto.getRandomValues(new Uint8Array(20)));
+    mfa = { mfaSecretEnc: await encryptSecret(SECRETS[email], id), mfaEnabledAt: new Date().toISOString(), mfaLastStep: 0 };
+  }
   store.tables.staff_users.push({
-    id: store.tables.staff_users.length + 1,
+    id,
+    ...mfa,
     email,
     displayName: email.split("@")[0],
     role,
@@ -66,16 +78,23 @@ async function addUser(email: string, role: string, extra: Record<string, unknow
   });
 }
 
+const cookieOf = (res: Response) => new RegExp(`${SESSION_COOKIE}=([^;]*)`).exec(res.headers.get("set-cookie") ?? "")?.[1] ?? "";
+
+/** Passphrase step, then (for accounts with MFA) the TOTP step; returns the final answer. */
 async function signIn(email: string, passphrase = PASS, ip?: string) {
-  const res = await loginPOST(req("/api/v1/admin/auth/login", { method: "POST", body: { email, passphrase }, ip }));
-  const setCookie = res.headers.get("set-cookie") ?? "";
-  const cookie = new RegExp(`${SESSION_COOKIE}=([^;]*)`).exec(setCookie)?.[1] ?? "";
-  return { res, setCookie, cookie };
+  let res = await loginPOST(req("/api/v1/admin/auth/login", { method: "POST", body: { email, passphrase }, ip }));
+  if (res.status === 200 && SECRETS[email.toLowerCase()]) {
+    vi.setSystemTime(new Date(Date.now() + 30_000)); // next time step (replay guard)
+    const code = await totp(SECRETS[email.toLowerCase()]);
+    res = await loginMfaPOST(req("/api/v1/admin/auth/login/mfa", { method: "POST", cookie: cookieOf(res), body: { code }, ip }));
+  }
+  return { res, setCookie: res.headers.get("set-cookie") ?? "", cookie: cookieOf(res) };
 }
 
 beforeEach(async () => {
-  store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [] };
+  store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [], staff_backup_codes: [] };
   resetRateLimits();
+  ENV.USAM_MFA_ENCRYPTION_KEY = "m".repeat(40); // test-only
   delete ENV.USAM_ADMIN_TOKEN;
   delete ENV.USAM_LEAD_NOTIFY_WEBHOOK;
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -84,7 +103,10 @@ beforeEach(async () => {
   await addUser("admin@example.test", "admin");
   await addUser("agent@example.test", "lead_inbox_agent");
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  delete ENV.USAM_MFA_ENCRYPTION_KEY;
+});
 
 describe("passphrase hashing", () => {
   it("uses PBKDF2-SHA256 at 600,000 iterations and rejects passphrases under 14 characters", async () => {
@@ -116,9 +138,12 @@ describe("sign-in", () => {
     const body = (await res.json()) as { data: { user: Record<string, unknown> } };
     expect(body.data.user).toMatchObject({ email: "owner@example.test", role: "super_admin" });
     expect(JSON.stringify(body)).not.toContain("pbkdf2");
-    expect(store.tables.staff_sessions).toHaveLength(1);
-    expect(store.tables.staff_sessions[0].id).not.toBe(cookie);
-    expect(String(store.tables.staff_sessions[0].id)).toMatch(/^[0-9a-f]{64}$/);
+    // The MFA step (L-A1b) replaced the pending row with a new full session.
+    expect(store.tables.staff_sessions.filter((s) => s.stage === "full")).toHaveLength(1);
+    for (const s of store.tables.staff_sessions) {
+      expect(s.id).not.toBe(cookie);
+      expect(String(s.id)).toMatch(/^[0-9a-f]{64}$/);
+    }
   });
 
   it("bad passphrase, unknown email and disabled account: same 401 message", async () => {
