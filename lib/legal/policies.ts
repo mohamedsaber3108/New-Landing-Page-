@@ -232,7 +232,8 @@ const REVISIONS: Record<PolicyType, string> = {
   // refunds, payments incl. a payment-questions section, privacy-requests).
   privacy: "2026-11-08",
   terms: "2026-11-08",
-  cookies: "2026-10-14",
+  // 2026-11-27: cookies — usam-locale is now also a first-party cookie.
+  cookies: "2026-11-27",
   refunds: "2026-11-08",
   payments: "2026-11-08",
   "ai-use": "2026-10-15",
@@ -593,7 +594,7 @@ const cookies: Policy = {
       en: {
         heading: "Necessary and functional storage",
         body: [
-          "Language preference (usam-locale) and theme preference (usam-theme) are stored in your browser's local storage so the site remembers them. They stay on your device and are not sent to an advertising network.",
+          "Language preference (usam-locale) and theme preference (usam-theme) are stored in your browser's local storage so the site remembers them. After you choose a language, a strictly necessary first-party cookie with the same name (value en or ar, kept for one year) is also set so our server can send pages in that language; it is used for nothing else. None of this is sent to an advertising network.",
           "A record of your cookie choice (usam-consent) is also stored so we can honor it and show it in Cookie Settings.",
           "Your Ask USAM message stays in the page's memory to produce a suggestion; it is not saved to a server or sent to an external model.",
         ],
@@ -601,7 +602,7 @@ const cookies: Policy = {
       ar: {
         heading: "التخزين الضروري والوظيفي",
         body: [
-          "يُحفظ تفضيل اللغة (usam-locale) وتفضيل المظهر (usam-theme) في التخزين المحلي للمتصفح ليتذكّرهما الموقع. ويظلّان على جهازك ولا يُرسلان إلى شبكة إعلانات.",
+          "يُحفظ تفضيل اللغة (usam-locale) وتفضيل المظهر (usam-theme) في التخزين المحلي للمتصفح ليتذكّرهما الموقع. وبعد اختيارك للّغة يُضبط أيضًا ملف ارتباط ضروري من الموقع نفسه بالاسم ذاته (قيمته en أو ar، ويبقى سنة واحدة) ليرسل خادمنا الصفحات بتلك اللغة، ولا يُستخدم لأي غرض آخر. ولا يُرسل شيء من ذلك إلى شبكة إعلانات.",
           "كما يُحفظ سجلّ اختيارك لملفات الارتباط (usam-consent) حتى نحترمه ونعرضه في الإعدادات.",
           "وتبقى رسالتك في «اسأل يوزم» في ذاكرة الصفحة لإنتاج اقتراح؛ ولا تُحفظ على خادم ولا تُرسل إلى نموذج خارجي.",
         ],

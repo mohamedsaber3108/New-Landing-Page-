@@ -94,6 +94,13 @@
 .mobile-nav-sub-desc{font-size:.76rem;line-height:1.4;color:var(--ink-soft)}
 .mobile-nav-extra{display:grid;gap:2px;padding-block-start:10px}
 
+/* ===== Arabic: no letter-spacing =====
+   Letter-spacing breaks Arabic letter joining. This overrides all 19 negative
+   letter-spacing rules (14 in globals.css, 5 in this file, incl. the mobile
+   hero h1) for Arabic. Specificity (0,3,0) beats the strongest of them,
+   `.research-home .hero-intro h1` (0,2,1), and this file loads last. */
+.usam-app.locale-ar :is(h1,h2,h3,p,b,.guide-title,.nav-menu-item-title,.contact-card-title){letter-spacing:0}
+
 @media (prefers-reduced-motion: reduce){
   .nav-menu-panel{transition:opacity .12s ease}
   .nav-menu-panel,.nav-menu[data-open="true"] .nav-menu-panel{transform:none}

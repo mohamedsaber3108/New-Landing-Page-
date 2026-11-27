@@ -4,6 +4,7 @@
 // links always navigate even if client hydration is incomplete.
 import Link from "./nav-link";
 import { ContactInfo } from "./contact-info";
+import { writeLocaleCookie } from "@/lib/locale";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Baby, Blocks, Bot, BriefcaseBusiness, Globe2, GraduationCap, Info, Menu, Moon, Route, Sparkles, Sun, X } from "lucide-react";
@@ -129,11 +130,13 @@ function Footer({ locale }: { locale: Locale }) {
     { href: "/ai-use", en: "AI & Data Use", ar: "الذكاء الاصطناعي والبيانات" },
     { href: "/privacy-requests", en: "Privacy Requests", ar: "طلبات الخصوصية" },
   ];
-  return <footer className="site-footer section-shell"><div><Mark /><p>{isArabic ? "تعلم · تطوّر · أنجز · اكتشف" : "Learn · Grow · Work · Discover"}</p></div><div><span>{isArabic ? "استكشف" : "Explore"}</span><Link href="/for-individuals">{copy[locale].individuals}</Link><Link href="/for-enterprises">{copy[locale].enterprises}</Link><Link href="/government">{copy[locale].government}</Link><Link href="/kids">{isArabic ? "الأطفال وأولياء الأمور" : "Kids & Parents"}</Link></div><div><span>{copy[locale].products}</span>{products.map((product) => <a key={product.id} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{isArabic ? product.arabicName : product.name}</a>)}</div><div><span>USAM</span><Link href="/about">{isArabic ? "عن يوزم" : "About"}</Link><Link href="/trust">{isArabic ? "الثقة" : "Trust"}</Link><Link href="/faq">{isArabic ? "الأسئلة الشائعة" : "FAQ"}</Link><Link href="/contact">{isArabic ? "تواصل" : "Contact"}</Link></div><div className="footer-legal"><span>{isArabic ? "القانون والخصوصية" : "Legal & Privacy"}</span>{legalLinks.map((l) => <Link key={l.href} href={l.href}>{isArabic ? l.ar : l.en}</Link>)}<button type="button" className="footer-cookie-btn" onClick={() => openCookieSettings()}>{isArabic ? "إعدادات ملفات الارتباط" : "Cookie Settings"}</button></div><div className="footer-contact"><span>{isArabic ? "تواصل معنا" : "Contact us"}</span><ContactInfo locale={locale} variant="footer" /></div><nav className="footer-utility" aria-label={isArabic ? "روابط إضافية" : "Additional information"}>{[{href:"/how-it-works",en:"How it works",ar:"كيف تعمل يوزم"},{href:"/pricing",en:"Pricing",ar:"الأسعار"},{href:"/guide",en:"Guide",ar:"الدليل"},{href:"/status",en:"Status",ar:"حالة الخدمات"},{href:"/privacy-requests",en:"Your Privacy Choices",ar:"اختيارات الخصوصية"},{href:"/sitemap",en:"Sitemap",ar:"خريطة الموقع"}].map(l=><Link key={l.href} href={l.href}>{isArabic?l.ar:l.en}</Link>)}</nav><small>{isArabic ? "© 2026 يوزم. منظومة واحدة مترابطة." : "© 2026 USAM. One connected ecosystem."}</small></footer>;
+  return <footer className="site-footer section-shell"><div><Mark /><p>{isArabic ? "تعلم · تطوّر · أنجز · اكتشف" : "Learn · Grow · Work · Discover"}</p></div><div><span>{isArabic ? "استكشف" : "Explore"}</span><Link href="/for-individuals">{copy[locale].individuals}</Link><Link href="/for-enterprises">{copy[locale].enterprises}</Link><Link href="/government">{copy[locale].government}</Link><Link href="/kids">{isArabic ? "الأطفال وأولياء الأمور" : "Kids & Parents"}</Link></div><div><span>{copy[locale].products}</span>{products.map((product) => <a key={product.id} href={trustedDomain(product.domain)} target="_blank" rel="noreferrer">{isArabic ? product.arabicName : product.name}</a>)}</div><div><span lang="en">USAM</span><Link href="/about">{isArabic ? "عن يوزم" : "About"}</Link><Link href="/trust">{isArabic ? "الثقة" : "Trust"}</Link><Link href="/faq">{isArabic ? "الأسئلة الشائعة" : "FAQ"}</Link><Link href="/contact">{isArabic ? "تواصل" : "Contact"}</Link></div><div className="footer-legal"><span>{isArabic ? "القانون والخصوصية" : "Legal & Privacy"}</span>{legalLinks.map((l) => <Link key={l.href} href={l.href}>{isArabic ? l.ar : l.en}</Link>)}<button type="button" className="footer-cookie-btn" onClick={() => openCookieSettings()}>{isArabic ? "إعدادات ملفات الارتباط" : "Cookie Settings"}</button></div><div className="footer-contact"><span>{isArabic ? "تواصل معنا" : "Contact us"}</span><ContactInfo locale={locale} variant="footer" /></div><nav className="footer-utility" aria-label={isArabic ? "روابط إضافية" : "Additional information"}>{[{href:"/how-it-works",en:"How it works",ar:"كيف تعمل يوزم"},{href:"/pricing",en:"Pricing",ar:"الأسعار"},{href:"/guide",en:"Guide",ar:"الدليل"},{href:"/status",en:"Status",ar:"حالة الخدمات"},{href:"/privacy-requests",en:"Your Privacy Choices",ar:"اختيارات الخصوصية"},{href:"/sitemap",en:"Sitemap",ar:"خريطة الموقع"}].map(l=><Link key={l.href} href={l.href}>{isArabic?l.ar:l.en}</Link>)}</nav><small>{isArabic ? "© 2026 يوزم. منظومة واحدة مترابطة." : "© 2026 USAM. One connected ecosystem."}</small></footer>;
 }
 
-export function USAMSite({ kind = "home", slug }: { kind?: RouteKind; slug?: string }) {
-  const [locale, setLocale] = useState<Locale>("en");
+export function USAMSite({ kind = "home", slug, initialLocale = "en" }: { kind?: RouteKind; slug?: string; initialLocale?: Locale }) {
+  // initialLocale comes from the usam-locale cookie on the server, so the first
+  // HTML is already in the chosen language (no flash, works without JS).
+  const [locale, setLocale] = useState<Locale>(initialLocale);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [ready,setReady] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -157,6 +160,8 @@ export function USAMSite({ kind = "home", slug }: { kind?: RouteKind; slug?: str
     document.documentElement.lang=locale; document.documentElement.dir=locale==="ar"?"rtl":"ltr"; document.documentElement.style.colorScheme=theme;
     // Persist ONLY when the user has made an explicit choice this/!prior session.
     if(ready && userChose.current)try { localStorage.setItem("usam-locale",locale);localStorage.setItem("usam-theme",theme); } catch {}
+    // Same guard for the server-readable locale cookie (strictly necessary preference).
+    if(ready && userChose.current) writeLocaleCookie(locale);
   }, [locale,theme,ready]);
   const chooseLocale = (value: Locale) => { userChose.current = true; setLocale(value); };
   const chooseTheme = (value: "light" | "dark") => { userChose.current = true; setTheme(value); };
