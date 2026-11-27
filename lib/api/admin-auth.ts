@@ -13,12 +13,12 @@
 //    rotated whenever staff with access change, and never pasted in chat,
 //    tickets or the repo.
 //  - Every admin request is rate limited per IP (see rate-limit.ts) before the
-//    token is checked.
+//    token is checked. With no client IP, only failed token checks count.
 //
 // Returns null when authorized; otherwise a ready-to-return error Response.
 
 import { fail } from "./envelope";
-import { rateLimit } from "./rate-limit";
+import { clientIp, limitKey } from "./rate-limit";
 
 function configuredToken(): string | undefined {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -35,8 +35,18 @@ export function adminConfigured(): boolean {
  */
 export function authorizeAdmin(request: Request, requestId: string): Response | null {
   // Limit first, so token guessing is slowed even when the token is wrong.
-  const limited = rateLimit(request, "admin", requestId);
+  // With a client IP every request counts. With no IP all callers would share
+  // one key, so there only FAILED checks count: an attacker cannot use up the
+  // quota of an admin who sends the right token.
+  const ip = clientIp(request);
+  const limited = limitKey(request, "admin", ip ?? "unknown", requestId, { count: Boolean(ip) });
   if (limited) return limited;
+  const denied = checkToken(request, requestId);
+  if (denied && !ip) limitKey(request, "admin", "unknown", requestId);
+  return denied;
+}
+
+function checkToken(request: Request, requestId: string): Response | null {
   const token = configuredToken();
   if (!token) {
     return fail({

@@ -14,9 +14,19 @@ vi.mock("drizzle-orm", () => ({
 vi.mock("@/db", () => ({ getDb: () => new FakeStore() }));
 vi.mock("@/app/chatgpt-auth", () => ({ getChatGPTUser: async () => null }));
 
-import { RATE_LIMITS, clientIp, rateLimit, resetRateLimits } from "@/lib/api/rate-limit";
+import {
+  MAX_KEYS,
+  RATE_LIMITS,
+  clientIp,
+  rateLimit,
+  rateLimitKeyCount,
+  resetRateLimits,
+} from "@/lib/api/rate-limit";
+import { authorizeAdmin } from "@/lib/api/admin-auth";
 import { GET as consentGET } from "@/app/api/v1/admin/consent/route";
 import { POST as leadsPOST } from "@/app/api/v1/leads/route";
+
+const ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process!.env!;
 
 function req(ip: string, headers: Record<string, string> = {}): Request {
   return new Request("https://x.test/api/v1/x", {
@@ -72,8 +82,54 @@ describe("rate limits", () => {
     expect(body.error.message).toBe("طلبات كثيرة جدًا. انتظر 500 ثانية ثم حاول مرة أخرى.");
   });
 
-  it("uses the last X-Forwarded-For entry (added by nginx), not a client-sent first entry", () => {
+  it("IP order: X-Real-IP, then last X-Forwarded-For; CF-Connecting-IP only when trusted", () => {
+    const h = (headers: Record<string, string>) => new Request("https://x.test", { headers });
     expect(clientIp(req("5.5.5.5"))).toBe("5.5.5.5");
-    expect(clientIp(new Request("https://x.test", { headers: { "cf-connecting-ip": "6.6.6.6" } }))).toBe("6.6.6.6");
+    expect(clientIp(h({ "x-real-ip": "7.7.7.7", "x-forwarded-for": "8.8.8.8" }))).toBe("7.7.7.7");
+    expect(clientIp(h({ "cf-connecting-ip": "6.6.6.6" }))).toBeNull();
+    ENV.USAM_TRUST_CF_CONNECTING_IP = "1";
+    try {
+      expect(clientIp(h({ "cf-connecting-ip": "6.6.6.6", "x-real-ip": "7.7.7.7" }))).toBe("6.6.6.6");
+    } finally {
+      delete ENV.USAM_TRUST_CF_CONNECTING_IP;
+    }
+    // IPv6 is grouped by /64.
+    expect(clientIp(h({ "x-real-ip": "2001:db8:1:2::abcd" }))).toBe(clientIp(h({ "x-real-ip": "2001:db8:1:2:ffff::1" })));
+  });
+
+  it("no IP headers: 50 leads POSTs get no 429 (public forms fail open, no shared bucket)", async () => {
+    const noIp = () => new Request("https://x.test/api/v1/leads", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    for (let i = 0; i < 50; i++) expect((await leadsPOST(noIp())).status).not.toBe(429);
+  });
+
+  it("public window resets: a leads POST works again after the window", async () => {
+    for (let i = 0; i <= RATE_LIMITS.leads.limit; i++) await leadsPOST(req("2.2.2.9"));
+    expect((await leadsPOST(req("2.2.2.9"))).status).toBe(429);
+    vi.advanceTimersByTime(RATE_LIMITS.leads.windowMs + 1);
+    expect((await leadsPOST(req("2.2.2.9"))).status).not.toBe(429);
+  });
+
+  it("admin with no IP: only wrong tokens count, so the right token still works", () => {
+    ENV.USAM_ADMIN_TOKEN = "t".repeat(40);
+    try {
+      const noIp = (token: string) => new Request("https://x.test/api/v1/admin/x", { headers: { "x-admin-token": token } });
+      for (let i = 0; i < 200; i++) expect(authorizeAdmin(noIp("t".repeat(40)), "r")).toBeNull();
+      for (let i = 0; i < RATE_LIMITS.admin.limit; i++) expect(authorizeAdmin(noIp("wrong"), "r")!.status).toBe(401);
+      expect(authorizeAdmin(noIp("wrong"), "r")!.status).toBe(429);
+    } finally {
+      delete ENV.USAM_ADMIN_TOKEN;
+    }
+  });
+
+  it("at the key cap, old buckets are evicted, not all counters cleared", () => {
+    const limit = RATE_LIMITS.leads.limit;
+    for (let i = 0; i <= limit; i++) rateLimit(req("10.0.0.1"), "leads", "r");
+    // Fill the map with many other recent keys (oldest first).
+    for (let i = 0; i < MAX_KEYS; i++) rateLimit(req(`11.${(i >> 16) & 255}.${(i >> 8) & 255}.${i & 255}`), "feedback", "r");
+    expect(rateLimitKeyCount()).toBeLessThan(MAX_KEYS);
+    // The newest keys survive with their counts.
+    const newest = `11.${((MAX_KEYS - 1) >> 16) & 255}.${((MAX_KEYS - 1) >> 8) & 255}.${(MAX_KEYS - 1) & 255}`;
+    for (let i = 0; i < RATE_LIMITS.feedback.limit - 1; i++) rateLimit(req(newest), "feedback", "r");
+    expect(rateLimit(req(newest), "feedback", "r")!.status).toBe(429);
   });
 });
