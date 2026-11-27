@@ -555,6 +555,47 @@ export const staffSessions = sqliteTable(
   (table) => [index("staff_sessions_user_idx").on(table.userId)],
 );
 
+/**
+ * Admin audit log (L-A2, ADMIN.md s.7). Append-only hash chain:
+ * hash = HMAC-SHA256(USAM_AUDIT_HMAC_KEY, prev_hash + "\n" + canonical row)
+ * (lib/api/audit.ts, scripts/audit-chain.mjs). prev_hash is UNIQUE, so two
+ * parallel appends cannot both follow the same row: the chain cannot fork.
+ * No personal text: actors are ids, values are scrubbed of e-mails/phones.
+ */
+export const adminAudit = sqliteTable(
+  "admin_audit",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // ISO 8601 UTC.
+    ts: text("ts").notNull(),
+    // "staff" | "break_glass" | "anonymous"
+    actorType: text("actor_type").notNull(),
+    actorId: integer("actor_id"),
+    // Role at the time of the action (null for break-glass / anonymous).
+    role: text("role"),
+    // Fixed list: AUDIT_ACTIONS in lib/api/audit.ts.
+    action: text("action").notNull(),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    beforeJson: text("before_json"),
+    afterJson: text("after_json"),
+    reason: text("reason"),
+    // "success" | "denied" | "failed"
+    result: text("result").notNull(),
+    ipHash: text("ip_hash"),
+    requestId: text("request_id"),
+    prevHash: text("prev_hash").notNull(),
+    hash: text("hash").notNull(),
+  },
+  (table) => [
+    uniqueIndex("admin_audit_prev_hash_uq").on(table.prevHash),
+    index("admin_audit_ts_idx").on(table.ts),
+    index("admin_audit_action_idx").on(table.action),
+  ],
+);
+
+export type AdminAuditRow = typeof adminAudit.$inferSelect;
+
 export type StaffUser = typeof staffUsers.$inferSelect;
 export type StaffSession = typeof staffSessions.$inferSelect;
 export type StaffBackupCode = typeof staffBackupCodes.$inferSelect;

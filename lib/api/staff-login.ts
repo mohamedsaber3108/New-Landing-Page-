@@ -9,6 +9,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { staffUsers, type StaffUser } from "@/db/schema";
+import { appendAudit, staffActor } from "./audit";
 import { fail, ok } from "./envelope";
 import type { Db } from "./idempotency";
 import { clientIp, rateLimit } from "./rate-limit";
@@ -69,7 +70,14 @@ export async function login(request: Request, requestId: string): Promise<Respon
     // account), and the same 401 + body for unknown, disabled, wrong and
     // locked, so neither status nor timing reveals which it was.
     const passOk = await verifyPassphrase(parsed.data.passphrase, user ? user.passwordHash : DUMMY_HASH);
-    if (!user) return fail({ code: "unauthenticated", message: BAD_LOGIN, requestId });
+    // L-A2: a refused sign-in is logged with the claimed account's id only
+    // (never the e-mail), one write on every refused path.
+    const refused = (why: string) =>
+      appendAudit(request, { actor: { type: "anonymous", id: found?.id ?? null }, action: "auth:login", result: "denied", requestId, after: { denied: why } });
+    if (!user) {
+      await refused(found ? "disabled" : "unknown_account");
+      return fail({ code: "unauthenticated", message: BAD_LOGIN, requestId });
+    }
 
     const locked = pairLocked(request, user.id, ip) || accountLocked(user.lockedUntil, now);
     if (!passOk || locked) {
@@ -77,6 +85,7 @@ export async function login(request: Request, requestId: string): Promise<Respon
         recordPairFailure(request, user.id, ip);
         await recordAccountFailure(db(), user.id, now);
       }
+      await refused(passOk ? "locked" : "bad_passphrase");
       return fail({ code: "unauthenticated", message: BAD_LOGIN, requestId });
     }
 
@@ -88,6 +97,7 @@ export async function login(request: Request, requestId: string): Promise<Respon
     // The account backstop is cleared only after the whole sign-in succeeds.
     if (stage !== "mfa_pending") await clearAccountFailures(db(), user.id);
     const token = await createSession(user, request, ip, { stage });
+    await appendAudit(request, { actor: staffActor(user), action: "auth:login", result: "success", requestId, after: { stage } });
     const data = stage === "mfa_pending" ? { mfaRequired: true } : { user: publicUser(user), mfaSetupRequired: stage === "enrol_only" };
     return ok(data, {
       requestId,
@@ -102,7 +112,10 @@ export async function logout(request: Request, requestId: string): Promise<Respo
   if (!originAllowed(request)) return fail({ code: "forbidden", message: "Request origin is not allowed.", requestId });
   try {
     const session = await getSession(request);
-    if (session) await revokeSession(session.sessionId);
+    if (session) {
+      await revokeSession(session.sessionId);
+      await appendAudit(request, { actor: staffActor(session.user), action: "auth:logout", result: "success", requestId });
+    }
   } catch {
     // Still clear the cookie below.
   }

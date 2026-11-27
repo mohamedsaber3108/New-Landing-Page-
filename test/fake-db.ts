@@ -14,7 +14,7 @@
 // code builds. This is enough to test idempotency races, replay, body-mismatch
 // conflicts, and the lead+outbox transactional write without native modules.
 
-import { consentEvents, enquiries, idempotencyKeys, outboxEvents, policyPublications, privacyRequests, staffBackupCodes, staffSessions, staffUsers } from "@/db/schema";
+import { adminAudit, consentEvents, enquiries, idempotencyKeys, outboxEvents, policyPublications, privacyRequests, staffBackupCodes, staffSessions, staffUsers } from "@/db/schema";
 
 type Row = Record<string, unknown>;
 
@@ -24,6 +24,7 @@ type Pred =
   | { kind: "lt"; col: ColRef; value: unknown }
   | { kind: "lte"; col: ColRef; value: unknown }
   | { kind: "isNull"; col: ColRef }
+  | { kind: "gte"; col: ColRef; value: unknown }
   | { kind: "and"; parts: Pred[] };
 type ColRef = { _table: string; _name: string };
 
@@ -55,6 +56,7 @@ function ensureRegistry() {
   register("staff_users", staffUsers as unknown as Record<string, unknown>);
   register("staff_sessions", staffSessions as unknown as Record<string, unknown>);
   register("staff_backup_codes", staffBackupCodes as unknown as Record<string, unknown>);
+  register("admin_audit", adminAudit as unknown as Record<string, unknown>);
   registryBuilt = true;
 }
 
@@ -75,6 +77,7 @@ function tableKey(table: unknown): string {
   if (table === staffUsers) return "staff_users";
   if (table === staffSessions) return "staff_sessions";
   if (table === staffBackupCodes) return "staff_backup_codes";
+  if (table === adminAudit) return "admin_audit";
   throw new Error("Unknown table");
 }
 
@@ -86,17 +89,20 @@ function uniqueKey(table: string, row: Row): string | null {
   if (table === "privacy_requests") return row.reference != null ? `prq:${row.reference}` : null;
   if (table === "staff_users") return row.email != null ? `email:${row.email}` : null;
   if (table === "staff_sessions") return row.id != null ? `sid:${row.id}` : null;
+  // The chain guard: prev_hash is UNIQUE (migration 0007).
+  if (table === "admin_audit") return row.prevHash != null ? `prev:${row.prevHash}` : null;
   return null;
 }
 
 export class FakeStore {
-  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [], staff_backup_codes: [] };
-  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0, consent_events: 0, policy_publications: 0, privacy_requests: 0, staff_users: 0, staff_backup_codes: 0 };
+  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [], staff_backup_codes: [], admin_audit: [] };
+  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0, consent_events: 0, policy_publications: 0, privacy_requests: 0, staff_users: 0, staff_backup_codes: 0, admin_audit: 0 };
 
   private matches(table: string, row: Row, pred: Pred): boolean {
     if (pred.kind === "and") return pred.parts.every((p) => this.matches(table, row, p));
     const { name } = colName(pred.col);
     if (pred.kind === "isNull") return row[name] == null;
+    if (pred.kind === "gte") return String(row[name]) >= String(pred.value);
     if (pred.kind === "lt") return (row[name] as number) < (pred.value as number);
     // Same as SQLite text comparison for ISO timestamps.
     if (pred.kind === "lte") return String(row[name]) <= String(pred.value);
@@ -104,6 +110,9 @@ export class FakeStore {
   }
 
   private insertRow(table: string, values: Row): Row | null {
+    // Tests that reset `tables` with an older list still get the newer tables.
+    this.tables[table] ??= [];
+    this.seq[table] ??= 0;
     const key = uniqueKey(table, values);
     if (key) {
       const existing = this.tables[table].some((r) => uniqueKey(table, r) === key);
@@ -117,7 +126,8 @@ export class FakeStore {
       table === "policy_publications" ||
       table === "privacy_requests" ||
       table === "staff_users" ||
-      table === "staff_backup_codes"
+      table === "staff_backup_codes" ||
+      table === "admin_audit"
     ) {
       if (row.id == null) row.id = ++this.seq[table];
     }
@@ -164,19 +174,23 @@ export class FakeStore {
   select(cols?: Record<string, unknown>) {
     // Arrow helpers keep `this` (the store) without aliasing it; tables are
     // read lazily because transaction rollback swaps `this.tables`.
-    const rowsOf = (t: string) => this.tables[t];
+    const rowsOf = (t: string) => this.tables[t] ?? [];
     const matches = (t: string, r: Row, p: Pred) => this.matches(t, r, p);
     return {
       from(table: unknown) {
         const t = tableKey(table);
         let pred: Pred | null = null;
         let lim = Infinity;
+        let newestFirst = false;
         const builder = {
           where(p: Pred) {
             pred = p;
             return builder;
           },
           orderBy() {
+            // Only admin_audit is ordered here: lib/api/audit.ts always reads
+            // it newest first (desc id). Other tables keep insertion order.
+            newestFirst = t === "admin_audit";
             return builder;
           },
           limit(n: number) {
@@ -189,6 +203,7 @@ export class FakeStore {
         };
         function result() {
           let rows = rowsOf(t).filter((r) => (pred ? matches(t, r, pred) : true));
+          if (newestFirst) rows = [...rows].sort((a, b) => (b.id as number) - (a.id as number));
           rows = rows.slice(0, lim);
           if (cols) {
             return rows.map((r) => {
@@ -209,7 +224,7 @@ export class FakeStore {
 
   update(table: unknown) {
     const t = tableKey(table);
-    const rowsOf = () => this.tables[t];
+    const rowsOf = () => this.tables[t] ?? [];
     const matches = (r: Row, p: Pred) => this.matches(t, r, p);
     return {
       set(patch: Row) {
