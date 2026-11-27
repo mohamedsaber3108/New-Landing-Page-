@@ -14,7 +14,7 @@
 // code builds. This is enough to test idempotency races, replay, body-mismatch
 // conflicts, and the lead+outbox transactional write without native modules.
 
-import { consentEvents, enquiries, idempotencyKeys, outboxEvents, policyPublications, privacyRequests } from "@/db/schema";
+import { consentEvents, enquiries, idempotencyKeys, outboxEvents, policyPublications, privacyRequests, staffSessions, staffUsers } from "@/db/schema";
 
 type Row = Record<string, unknown>;
 
@@ -51,6 +51,8 @@ function ensureRegistry() {
   register("consent_events", consentEvents as unknown as Record<string, unknown>);
   register("policy_publications", policyPublications as unknown as Record<string, unknown>);
   register("privacy_requests", privacyRequests as unknown as Record<string, unknown>);
+  register("staff_users", staffUsers as unknown as Record<string, unknown>);
+  register("staff_sessions", staffSessions as unknown as Record<string, unknown>);
   registryBuilt = true;
 }
 
@@ -68,6 +70,8 @@ function tableKey(table: unknown): string {
   if (table === consentEvents) return "consent_events";
   if (table === policyPublications) return "policy_publications";
   if (table === privacyRequests) return "privacy_requests";
+  if (table === staffUsers) return "staff_users";
+  if (table === staffSessions) return "staff_sessions";
   throw new Error("Unknown table");
 }
 
@@ -77,12 +81,14 @@ function uniqueKey(table: string, row: Row): string | null {
   if (table === "enquiries") return row.reference != null ? `ref:${row.reference}` : null;
   if (table === "outbox_events") return row.eventId != null ? `evt:${row.eventId}` : null;
   if (table === "privacy_requests") return row.reference != null ? `prq:${row.reference}` : null;
+  if (table === "staff_users") return row.email != null ? `email:${row.email}` : null;
+  if (table === "staff_sessions") return row.id != null ? `sid:${row.id}` : null;
   return null;
 }
 
 export class FakeStore {
-  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [] };
-  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0, consent_events: 0, policy_publications: 0, privacy_requests: 0 };
+  tables: Record<string, Row[]> = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [] };
+  private seq: Record<string, number> = { enquiries: 0, outbox_events: 0, consent_events: 0, policy_publications: 0, privacy_requests: 0, staff_users: 0 };
 
   private matches(table: string, row: Row, pred: Pred): boolean {
     if (pred.kind === "and") return pred.parts.every((p) => this.matches(table, row, p));
@@ -105,7 +111,8 @@ export class FakeStore {
       table === "outbox_events" ||
       table === "consent_events" ||
       table === "policy_publications" ||
-      table === "privacy_requests"
+      table === "privacy_requests" ||
+      table === "staff_users"
     ) {
       if (row.id == null) row.id = ++this.seq[table];
     }

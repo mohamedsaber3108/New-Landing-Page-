@@ -8,6 +8,7 @@
 
 import { newRequestId, ok } from "@/lib/api/envelope";
 import { authorizeAdmin } from "@/lib/api/admin-auth";
+import { ROUTE_PERMISSIONS } from "@/lib/api/staff-permissions";
 import { processOutboxBatch } from "@/lib/api/outbox-worker";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const requestId = newRequestId();
 
-  const denied = authorizeAdmin(request, requestId);
+  const denied = await authorizeAdmin(request, requestId, ROUTE_PERMISSIONS["POST /api/v1/admin/outbox/process"]);
   if (denied) return denied;
 
   const result = await processOutboxBatch({ limit: 50 });

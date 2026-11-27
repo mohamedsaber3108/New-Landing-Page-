@@ -9,6 +9,7 @@
 
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
 import { authorizeAdmin } from "@/lib/api/admin-auth";
+import { ROUTE_PERMISSIONS } from "@/lib/api/staff-permissions";
 import { getDb } from "@/db";
 import { consentEvents } from "@/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const requestId = newRequestId();
-  const denied = authorizeAdmin(request, requestId);
+  const denied = await authorizeAdmin(request, requestId, ROUTE_PERMISSIONS["GET /api/v1/admin/consent"]);
   if (denied) return denied;
 
   const ref = new URL(request.url).searchParams.get("ref");

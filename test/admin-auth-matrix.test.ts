@@ -170,11 +170,22 @@ function routeFiles(dir: string): string[] {
   });
 }
 
+// The staff sign-in routes (L-A1a) are the way IN, so they cannot require an
+// existing session or token. They are listed here by name only and are tested
+// in test/staff-auth.test.ts. Any other route must pass the scan below.
+const AUTH_ROUTES = ["auth/login", "auth/logout", "auth/me"];
+
 describe("admin folder scan", () => {
-  const files = routeFiles(ADMIN_DIR);
+  const all = routeFiles(ADMIN_DIR);
+  const files = all.filter((f) => !AUTH_ROUTES.includes(path.relative(ADMIN_DIR, path.dirname(f))));
 
   it("finds the admin route files", () => {
     expect(files.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("the exempt sign-in routes exist and are exactly the listed ones", () => {
+    const exempt = all.map((f) => path.relative(ADMIN_DIR, path.dirname(f))).filter((r) => r.startsWith("auth/"));
+    expect(exempt.sort()).toEqual([...AUTH_ROUTES].sort());
   });
 
   it.each(files.map((f) => [path.relative(ADMIN_DIR, path.dirname(f)), f]))(
