@@ -5,6 +5,9 @@ import { siteUrl } from "@/lib/site";
 import { dirFor } from "@/lib/locale";
 import { requestLocale } from "@/lib/request-locale";
 
+// Every page depends on the locale cookie: never prerender at build time.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: "USAM — Learn, Grow, Earn",

@@ -4,7 +4,7 @@
 // links always navigate even if client hydration is incomplete.
 import Link from "./nav-link";
 import { ContactInfo } from "./contact-info";
-import { writeLocaleCookie } from "@/lib/locale";
+import { persistPreferences } from "@/lib/locale";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Baby, Blocks, Bot, BriefcaseBusiness, Globe2, GraduationCap, Info, Menu, Moon, Route, Sparkles, Sun, X } from "lucide-react";
@@ -146,24 +146,26 @@ export function USAMSite({ kind = "home", slug, initialLocale = "en" }: { kind?:
   // preferences", so a reset would not survive a reload. A real toggle flips
   // this ref via the wrapped setters below.
   const userChose = useRef(false);
+  // Narrower: only a LANGUAGE choice (or a restored saved language) may set the
+  // usam-locale cookie. A theme-only choice must not.
+  const localeChosen = useRef(false);
   useEffect(() => {
     // Restore the saved choice once after hydration. localStorage is not
     // available during the server render, so this must run after mount; the
     // one extra render is intended. The persistence guard (userChose + ready)
     // depends on this exact order, so it is kept as is.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    try { const language=localStorage.getItem("usam-locale"); const mode=localStorage.getItem("usam-theme"); if(language==="ar"||language==="en"){setLocale(language);userChose.current=true;} if(mode==="dark"||mode==="light"){setTheme(mode);userChose.current=true;} } catch {}
+    try { const language=localStorage.getItem("usam-locale"); const mode=localStorage.getItem("usam-theme"); if(language==="ar"||language==="en"){setLocale(language);userChose.current=true;localeChosen.current=true;} if(mode==="dark"||mode==="light"){setTheme(mode);userChose.current=true;} } catch {}
     setReady(true);
   }, []);
   useEffect(() => {
     // Always reflect the current locale/theme in the document (not persisted).
     document.documentElement.lang=locale; document.documentElement.dir=locale==="ar"?"rtl":"ltr"; document.documentElement.style.colorScheme=theme;
     // Persist ONLY when the user has made an explicit choice this/!prior session.
-    if(ready && userChose.current)try { localStorage.setItem("usam-locale",locale);localStorage.setItem("usam-theme",theme); } catch {}
-    // Same guard for the server-readable locale cookie (strictly necessary preference).
-    if(ready && userChose.current) writeLocaleCookie(locale);
+    // The guard itself lives in lib/locale.ts (persistPreferences) and is tested there.
+    persistPreferences({ ready, userChose: userChose.current, localeChosen: localeChosen.current, locale, theme });
   }, [locale,theme,ready]);
-  const chooseLocale = (value: Locale) => { userChose.current = true; setLocale(value); };
+  const chooseLocale = (value: Locale) => { userChose.current = true; localeChosen.current = true; setLocale(value); };
   const chooseTheme = (value: "light" | "dark") => { userChose.current = true; setTheme(value); };
   return <div className={`usam-app theme-${theme} locale-${locale}`} dir={locale === "ar" ? "rtl" : "ltr"}><Nav locale={locale} setLocale={chooseLocale} theme={theme} setTheme={chooseTheme} onGuide={() => setGuideOpen(true)} />{kind === "home" ? <Home locale={locale} onGuide={() => setGuideOpen(true)} /> : <InfoPage slug={slug ?? "explore"} locale={locale} onGuide={() => setGuideOpen(true)} />}<Footer locale={locale} /><GuideConnector theme={theme} locale={locale} open={guideOpen} setOpen={setGuideOpen} /><CookieConsent locale={locale} /><CookieSettingsModal locale={locale} /></div>;
 }
