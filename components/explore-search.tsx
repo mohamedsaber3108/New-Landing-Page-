@@ -54,10 +54,7 @@ export function ExploreSearch({ locale }: { locale: Locale }) {
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
     const q = query.trim();
-    if (!q) {
-      setState({ kind: "idle" });
-      return;
-    }
+    if (!q) return;
     debounce.current = setTimeout(async () => {
       setState({ kind: "loading" });
       try {
@@ -86,7 +83,11 @@ export function ExploreSearch({ locale }: { locale: Locale }) {
         {L.label}
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            // Clearing the box resets to idle here (event handler), not in the effect.
+            if (!e.target.value.trim()) setState({ kind: "idle" });
+          }}
           placeholder={L.placeholder}
           type="search"
           aria-label={L.label}

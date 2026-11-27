@@ -4,9 +4,9 @@
 // links always navigate even if client hydration is incomplete.
 import Link from "./nav-link";
 import { ContactInfo } from "./contact-info";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { ArrowLeft, ArrowRight, ArrowUpRight, Baby, Blocks, Bot, BriefcaseBusiness, Building2, CheckCircle2, Globe2, GraduationCap, Info, Landmark, Menu, Moon, Network, Route, Search, Send, ShieldCheck, Sparkles, Sun, UserRound, X } from "lucide-react";
+import { Baby, Blocks, Bot, BriefcaseBusiness, Globe2, GraduationCap, Info, Menu, Moon, Route, Sparkles, Sun, X } from "lucide-react";
 import { ResearchLanding, GuideConnector } from "./research-landing";
 import { PageContent } from "./page-content";
 import { NavMenu, MobileNavSection } from "./nav-menu";
@@ -55,20 +55,26 @@ function ProductLink({ product, locale, compact = false }: { product: Product; l
 
 type SectionId = "individuals" | "enterprises" | "government" | "explore" | "ecosystem";
 
+const HOVER_QUERY = "(hover: hover) and (pointer: fine)";
+function readHover(): boolean {
+  return typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(HOVER_QUERY).matches;
+}
+function subscribeHover(onChange: () => void): () => void {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  const mq = window.matchMedia(HOVER_QUERY);
+  mq.addEventListener?.("change", onChange);
+  return () => mq.removeEventListener?.("change", onChange);
+}
+
 function Nav({ locale, setLocale, theme, setTheme, onGuide }: { locale: Locale; setLocale: (value: Locale) => void; theme: "light" | "dark"; setTheme: (value: "light" | "dark") => void; onGuide: () => void }) {
   const [open, setOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null); // desktop mega-menu
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-  const [hoverEnabled, setHoverEnabled] = useState(false);
+  // Enable hover-to-open only on devices with a real hover-capable pointer.
+  // Server render and hydration use false, then the client value, as before.
+  const hoverEnabled = useSyncExternalStore(subscribeHover, readHover, () => false);
   const t = copy[locale];
   const headerRef = useRef<HTMLElement>(null);
-
-  // Enable hover-to-open only on devices with a real hover-capable pointer.
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia) {
-      setHoverEnabled(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
-    }
-  }, []);
 
   // Close the mobile menu on Escape; close the desktop mega-menu on Escape too.
   useEffect(() => {
@@ -138,6 +144,11 @@ export function USAMSite({ kind = "home", slug }: { kind?: RouteKind; slug?: str
   // this ref via the wrapped setters below.
   const userChose = useRef(false);
   useEffect(() => {
+    // Restore the saved choice once after hydration. localStorage is not
+    // available during the server render, so this must run after mount; the
+    // one extra render is intended. The persistence guard (userChose + ready)
+    // depends on this exact order, so it is kept as is.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     try { const language=localStorage.getItem("usam-locale"); const mode=localStorage.getItem("usam-theme"); if(language==="ar"||language==="en"){setLocale(language);userChose.current=true;} if(mode==="dark"||mode==="light"){setTheme(mode);userChose.current=true;} } catch {}
     setReady(true);
   }, []);

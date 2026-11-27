@@ -114,7 +114,7 @@ export class FakeStore {
   // Query-builder surface used by the code under test.
   insert(table: unknown) {
     const t = tableKey(table);
-    const store = this;
+    const insertRow = (values: Row) => this.insertRow(t, values);
     return {
       values(values: Row) {
         let conflictDoNothing = false;
@@ -124,14 +124,14 @@ export class FakeStore {
             return chain;
           },
           returning(_cols?: unknown) {
-            const row = store.insertRow(t, values);
+            const row = insertRow(values);
             if (row) return Promise.resolve([{ ...row }]);
             if (conflictDoNothing) return Promise.resolve([]);
             return Promise.reject(new Error("UNIQUE constraint failed"));
           },
           then(resolve: (v: unknown) => void, reject: (e: unknown) => void) {
             // Awaited without returning(): perform the insert now.
-            const row = store.insertRow(t, values);
+            const row = insertRow(values);
             if (!row && !conflictDoNothing) return reject(new Error("UNIQUE constraint failed"));
             return resolve(undefined);
           },
@@ -142,7 +142,10 @@ export class FakeStore {
   }
 
   select(cols?: Record<string, unknown>) {
-    const store = this;
+    // Arrow helpers keep `this` (the store) without aliasing it; tables are
+    // read lazily because transaction rollback swaps `this.tables`.
+    const rowsOf = (t: string) => this.tables[t];
+    const matches = (t: string, r: Row, p: Pred) => this.matches(t, r, p);
     return {
       from(table: unknown) {
         const t = tableKey(table);
@@ -165,7 +168,7 @@ export class FakeStore {
           },
         };
         function result() {
-          let rows = store.tables[t].filter((r) => (pred ? store.matches(t, r, pred) : true));
+          let rows = rowsOf(t).filter((r) => (pred ? matches(t, r, pred) : true));
           rows = rows.slice(0, lim);
           if (cols) {
             return rows.map((r) => {
@@ -186,14 +189,15 @@ export class FakeStore {
 
   update(table: unknown) {
     const t = tableKey(table);
-    const store = this;
+    const rowsOf = () => this.tables[t];
+    const matches = (r: Row, p: Pred) => this.matches(t, r, p);
     return {
       set(patch: Row) {
         return {
           where(pred: Pred) {
             const updated: Row[] = [];
-            for (const row of store.tables[t]) {
-              if (store.matches(t, row, pred)) {
+            for (const row of rowsOf()) {
+              if (matches(row, pred)) {
                 Object.assign(row, patch);
                 updated.push(row);
               }

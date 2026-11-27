@@ -34,9 +34,9 @@ export function useLegalRequirements(): LegalRequirements {
   useEffect(() => {
     let active = true;
     fetch("/api/v1/legal/requirements")
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? (r.json() as Promise<{ data?: LegalRequirements }>) : null))
       .then((json) => {
-        if (active && json?.data) setReq(json.data as LegalRequirements);
+        if (active && json?.data) setReq(json.data);
       })
       .catch(() => {});
     return () => {
