@@ -5,8 +5,10 @@
 // server can send <html lang dir> and the page text in that language. The
 // cookie is a necessary and functional preference (kind "functional" in
 // lib/consent-manager.ts STORAGE_ITEMS): it only carries "en" or "ar", is set
-// only after the visitor chooses a language, is listed in Cookie Settings and
-// is removed by "Reset saved preferences".
+// after the visitor chooses a language or when a saved usam-locale is restored
+// (a theme choice also saves the current language in localStorage, so a
+// theme-only visitor can get the cookie on a later visit), is listed in Cookie
+// Settings and is removed by "Reset saved preferences".
 
 export type SiteLocale = "en" | "ar";
 

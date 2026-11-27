@@ -117,8 +117,8 @@ export const STORAGE_ITEMS = [
     kind: "functional" as const,
     purpose: { en: "Remembers your language choice (English/Arabic).", ar: "يتذكّر اختيارك للّغة (العربية/الإنجليزية)." },
     storage: {
-      en: "Local storage, plus a first-party cookie (a necessary and functional preference, set only after you choose a language)",
-      ar: "التخزين المحلي، وملف ارتباط من الموقع نفسه (تفضيل ضروري ووظيفي، يُضبط فقط بعد اختيارك للّغة)",
+      en: "Local storage, plus a first-party cookie (a necessary and functional preference, set after you choose a language or when a saved language is restored)",
+      ar: "التخزين المحلي، وملف ارتباط من الموقع نفسه (تفضيل ضروري ووظيفي، يُضبط بعد اختيارك للّغة أو عند استعادة لغة محفوظة)",
     },
     duration: { en: "Until you clear it (cookie: 1 year)", ar: "حتى تقوم بمسحه (ملف الارتباط: سنة واحدة)" },
   },
