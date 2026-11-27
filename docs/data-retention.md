@@ -6,7 +6,7 @@ Source: `db/schema.ts` at the commit of this file. "Today" means what the code d
 
 **Finding: no record is deleted automatically today.** No table has a cleanup job. The only delete-like code removes in-memory rate-limit counters (`lib/api/rate-limit.ts`), not database rows. `idempotency_keys.expires_at` is set (24 h), but nothing removes expired rows.
 
-**Gap to flag to the owner:** the draft privacy policy (`lib/legal/policies.ts`, section `retention-and-rights`) says each record is kept "only as long as needed … and then delete it". The code does not do this yet. Either a cleanup job is built, or the text is adjusted before publishing.
+**Gap to flag to the owner:** the draft privacy policy (`lib/legal/policies.ts`, section `retention-and-rights`) says each record is kept "only as long as needed … and then delete it". *(Quote checked against `lib/legal/policies.ts` on main at the time of writing. Whether that text is published and what it legally binds is **to verify** by the owner and counsel.)* The code does not do this yet. Either a cleanup job is built, or the text is adjusted before publishing.
 
 | Table | Personal data it holds | Today | Proposed retention (proposal, owner and counsel decide) |
 |---|---|---|---|
@@ -18,12 +18,12 @@ Source: `db/schema.ts` at the commit of this file. "Today" means what the code d
 | `guide_signals` | none: resolved intent, locale, accepted flag (the visitor's text is never stored) | Kept forever, no delete | 24 months, or aggregate monthly and delete raw rows. |
 | `content_feedback` | none: content id, rating (+1/-1), locale | Kept forever, no delete | 24 months, or aggregate and delete raw rows. |
 | `policy_publications` | published_by (staff name or label) | Kept forever, no delete | Keep for the life of the site. It is the version history of the legal texts. |
-| `staff_users` (**arrives with PR #15**) | staff email, display name, role, passphrase hash, failed sign-in count | Not on main yet | While the person is staff. On leaving: disable at once, delete or anonymise after 12 months (audit trail need, L-A2). |
-| `staff_sessions` (**arrives with PR #15**) | user id, keyed IP hash (only if `USAM_SESSION_HASH_SALT` is set), short user-agent | Not on main yet; expired rows kept | Delete 30 days after `expires_at`. |
+| `staff_users` (**arrives with PR #15; columns to verify** against the merged migration) | staff email, display name, role, passphrase hash, failed sign-in count, lock time | Not on main yet | While the person is staff. On leaving: disable at once, delete or anonymise after 12 months (audit trail need, L-A2). |
+| `staff_sessions` (**arrives with PR #15; columns to verify** against the merged migration) | user id, keyed IP hash (only if `USAM_SESSION_HASH_SALT` is set), short user-agent | Not on main yet; expired rows kept | Delete 30 days after `expires_at`. |
 
-Outside the database (not checked in this repo): nginx access and error logs. The draft privacy policy says they rotate daily and are kept about 14 days. That is server configuration and is **not verified here**.
+Outside the database: nginx access and error logs. The draft privacy policy says they rotate daily and are kept about 14 days. That is server configuration, not in this repo, so the **14-day rotation is to verify** on the server (`/etc/logrotate.d/nginx`).
 
-Logs from the app itself: the only `console` call in `app/` and `lib/` is one rate-limit warning with no request data. `test/log-redaction.test.ts` checks that no submitted email, phone, name or message text reaches a log line in any public POST workflow or in outbox delivery.
+Logs from the app itself: the only `console` call in `app/` and `lib/` is one rate-limit warning with no request data. There is no other logging library and no raw `process.stdout`/`stderr` write; the test checks this too. `test/log-redaction.test.ts` checks that no submitted email, phone, name or message text reaches a log line in any public POST workflow or in outbox delivery.
 
 ## What would implement a decision
 After the owner decides, one scheduled job (the same trigger as the outbox timer) can run the deletes or anonymisation per table, with a dry-run count first. That is a separate task, not part of L-S2.
