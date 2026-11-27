@@ -86,7 +86,22 @@ Set via environment; **no secrets are committed**. Missing integrations produce 
 |----------|--------|
 | `USAM_LEAD_NOTIFY_WEBHOOK` | Enables webhook delivery of lead-notification outbox events. |
 | `USAM_LEAD_NOTIFY_EMAIL` | Marks an email channel (provider wiring is a gated task). |
-| `USAM_ADMIN_TOKEN` | Required for the admin outbox endpoint; unset = admin disabled. |
+| `USAM_ADMIN_TOKEN` | Required for all `/api/v1/admin/*` endpoints; unset = admin disabled. |
+
+**Admin token rule:** random (for example `openssl rand -hex 32`), at least 32
+characters, rotated whenever staff with access change, and never pasted in chat,
+tickets or the repo.
+
+**Rate limits (per client IP, in process memory):** admin 60/min (all admin
+routes together, checked before the token); `POST /api/v1/leads` and
+`/api/enquiries` 10 per 10 min (shared); `POST /api/v1/privacy-requests` 5 per
+10 min; `POST /api/v1/feedback` 30 per 10 min. Over the limit returns `429`
+with `Retry-After` and a plain Arabic or English message with the wait time.
+Client IP order: `X-Real-IP`, then the last `X-Forwarded-For` entry. nginx must
+send `proxy_set_header X-Real-IP $remote_addr;`. `CF-Connecting-IP` is read
+first only when `USAM_TRUST_CF_CONNECTING_IP=1`; set that only if the origin
+accepts traffic from Cloudflare alone. With no IP header, public forms are not
+limited (no shared bucket) and admin counts only failed token checks.
 
 ---
 

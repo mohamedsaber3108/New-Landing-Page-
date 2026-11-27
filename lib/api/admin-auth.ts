@@ -9,10 +9,16 @@
 //    embedded in frontend bundles, placed in URLs, or written to public files.
 //    Staff supply it as an `x-admin-token` request header from a trusted tool
 //    (e.g. curl / an internal admin client), not from the website UI.
+//  - Token rule: random (e.g. `openssl rand -hex 32`), at least 32 characters,
+//    rotated whenever staff with access change, and never pasted in chat,
+//    tickets or the repo.
+//  - Every admin request is rate limited per IP (see rate-limit.ts) before the
+//    token is checked. With no client IP, only failed token checks count.
 //
 // Returns null when authorized; otherwise a ready-to-return error Response.
 
 import { fail } from "./envelope";
+import { clientIp, limitKey } from "./rate-limit";
 
 function configuredToken(): string | undefined {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -28,6 +34,19 @@ export function adminConfigured(): boolean {
  * directly; on success returns null (proceed). Uses a constant-time-ish compare.
  */
 export function authorizeAdmin(request: Request, requestId: string): Response | null {
+  // Limit first, so token guessing is slowed even when the token is wrong.
+  // With a client IP every request counts. With no IP all callers would share
+  // one key, so there only FAILED checks count: an attacker cannot use up the
+  // quota of an admin who sends the right token.
+  const ip = clientIp(request);
+  const limited = limitKey(request, "admin", ip ?? "unknown", requestId, { count: Boolean(ip) });
+  if (limited) return limited;
+  const denied = checkToken(request, requestId);
+  if (denied && !ip) limitKey(request, "admin", "unknown", requestId);
+  return denied;
+}
+
+function checkToken(request: Request, requestId: string): Response | null {
   const token = configuredToken();
   if (!token) {
     return fail({
