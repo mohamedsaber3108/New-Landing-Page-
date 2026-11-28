@@ -36,8 +36,10 @@ export const AUTH_ACTIONS = [
   "auth:mfa-step-up",
   "auth:mfa-backup-codes",
 ] as const;
-/** The fixed action list: every admin permission plus the sign-in events. */
-export const AUDIT_ACTIONS = [...PERMISSIONS, ...AUTH_ACTIONS] as const;
+/** Written by server command-line tools (actor_type "server_cli"), e.g. scripts/create-staff.mjs. */
+export const CLI_ACTIONS = ["staff:create"] as const;
+/** The fixed action list: every admin permission, the sign-in events and the CLI events. */
+export const AUDIT_ACTIONS = [...PERMISSIONS, ...AUTH_ACTIONS, ...CLI_ACTIONS] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 export const AUDIT_RESULTS = ["success", "denied", "failed"] as const;
 export type AuditResult = (typeof AUDIT_RESULTS)[number];
@@ -93,11 +95,13 @@ const MAX_TEXT = 200;
 
 /** Replace e-mails and phone numbers, cap length. Exported for tests. */
 export function scrubText(text: string): string {
-  return text
+  const clean = text
     .replace(EMAIL, "[email]")
     // 8+ digits looks like a phone number; an ISO date (2026-06-01...) does not count.
-    .replace(PHONE, (m) => (m.replace(/\D/g, "").length >= 8 && !/^\d{4}-\d{2}-\d{2}/.test(m) ? "[number]" : m))
-    .slice(0, MAX_TEXT);
+    .replace(PHONE, (m) => (m.replace(/\D/g, "").length >= 8 && !/^\d{4}-\d{2}-\d{2}/.test(m) ? "[number]" : m));
+  // Cut on code points, never inside a UTF-16 surrogate pair (review-022 B5):
+  // a lone half would be stored differently and break the chain check.
+  return Array.from(clean).slice(0, MAX_TEXT).join("");
 }
 
 function scrub(value: unknown, depth = 0): unknown {
@@ -136,9 +140,17 @@ async function chainHash(key: string, prevHash: string, row: ChainFields): Promi
 
 let queue: Promise<unknown> = Promise.resolve();
 
-async function appendOnce(key: string, fields: ChainFields): Promise<boolean> {
-  const last = await db().select({ hash: adminAudit.hash }).from(adminAudit).orderBy(desc(adminAudit.id)).limit(1);
+/**
+ * One try. `ts` is taken HERE, inside the queue and after reading the last
+ * row, and never earlier than that row's ts (review-022 B1): so id order and
+ * ts order always agree and a day's export is one unbroken piece of the chain,
+ * even around midnight or with another writer (isolate, create-staff.mjs).
+ */
+async function appendOnce(key: string, entry: Omit<ChainFields, "ts">): Promise<boolean> {
+  const last = await db().select({ hash: adminAudit.hash, ts: adminAudit.ts }).from(adminAudit).orderBy(desc(adminAudit.id)).limit(1);
   const prevHash = last[0]?.hash ?? GENESIS_HASH;
+  const now = new Date().toISOString();
+  const fields: ChainFields = { ...entry, ts: last[0] && last[0].ts > now ? last[0].ts : now };
   const hash = await chainHash(key, prevHash, fields);
   const inserted = await db().insert(adminAudit).values({ ...fields, prevHash, hash }).onConflictDoNothing().returning({ id: adminAudit.id });
   return inserted.length === 1;
@@ -155,8 +167,7 @@ export async function appendAudit(request: Request | null, entry: AuditEntry, op
     return;
   }
   const actor = entry.actor;
-  const fields: ChainFields = {
-    ts: new Date().toISOString(),
+  const fields: Omit<ChainFields, "ts"> = {
     actorType: actor.type,
     actorId: actor.type === "staff" ? actor.id : actor.type === "anonymous" ? (actor.id ?? null) : null,
     role: actor.type === "staff" ? actor.role : null,

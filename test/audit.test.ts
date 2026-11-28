@@ -34,7 +34,9 @@ import { hashPassphrase } from "@/lib/api/staff-password";
 import { SESSION_COOKIE } from "@/lib/api/staff-session";
 import * as chain from "../scripts/audit-chain.mjs";
 import { buildExport } from "../scripts/audit-export.mjs";
-import { verifyExportFile } from "../scripts/audit-verify.mjs";
+import { verifyDb, verifyExportFile } from "../scripts/audit-verify.mjs";
+
+const verifyRows = chain.verifyRows;
 
 const ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process!.env!;
 const KEY = "a".repeat(40); // test-only
@@ -102,6 +104,35 @@ describe("hash chain", () => {
     expect(rows()).toHaveLength(25);
     expect(new Set(rows().map((r) => r.prevHash)).size).toBe(25);
     expect(verify()).toMatchObject({ ok: true, rows: 25 });
+  });
+
+  it("B1: ts is taken inside the append and never goes back, so each day's export is one unbroken piece", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const at = (iso: string) => vi.setSystemTime(new Date(iso));
+      const add = () => appendAudit(null, { actor: { type: "break_glass" }, action: "leads:view", result: "success" });
+      at("2026-06-01T23:59:59.999Z");
+      await add();
+      at("2026-06-01T23:59:59.400Z"); // another writer's clock is behind
+      await add();
+      at("2026-06-02T00:00:01.000Z");
+      await Promise.all([add(), add()]);
+      const list = rows().map(snake);
+      expect(list.map((r) => String(r.ts).slice(0, 10))).toEqual(["2026-06-01", "2026-06-01", "2026-06-02", "2026-06-02"]);
+      expect(list.every((r, i) => i === 0 || String(r.ts) >= String(list[i - 1].ts))).toBe(true);
+      for (const day of ["2026-06-01", "2026-06-02"]) {
+        const dayRows = list.filter((r) => String(r.ts).startsWith(day));
+        expect(verifyExportFile(KEY, buildExport(KEY, day, dayRows)), day).toMatchObject({ ok: true, rows: 2 });
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("B5: long text is cut on code points, never inside a surrogate pair", () => {
+    const cut = scrubText(`a${"😀".repeat(300)}`);
+    expect(Array.from(cut)).toHaveLength(200);
+    expect(cut).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/);
   });
 
   it("no key: nothing is written for normal entries, and a required entry throws", async () => {
@@ -207,14 +238,35 @@ describe("scripts", () => {
     for (let i = 0; i < 3; i++) await appendAudit(null, { actor: { type: "break_glass" }, action: "leads:view", result: "success" });
     const text = buildExport(KEY, "2026-06-01", rows().map(snake));
     const lines = text.trimEnd().split("\n");
-    expect(lines).toHaveLength(4);
-    expect(JSON.parse(lines[3])).toMatchObject({ type: "signature", day: "2026-06-01", rows: 3, lastHash: rows()[2].hash });
+    expect(lines).toHaveLength(5);
+    expect(JSON.parse(lines[0])).toMatchObject({ type: "header", version: 2, day: "2026-06-01", rows: 3, lastHash: rows()[2].hash });
+    expect(JSON.parse(lines[4])).toMatchObject({ type: "signature" });
     expect(verifyExportFile(KEY, text)).toMatchObject({ ok: true, rows: 3 });
     expect(verifyExportFile(KEY, text.replace('"success"', '"denied"'))).toMatchObject({ ok: false });
     expect(verifyExportFile("z".repeat(40), text)).toMatchObject({ ok: false });
     const dir = mkdtempSync(join(tmpdir(), "audit-"));
     writeFileSync(join(dir, "x.jsonl"), text);
     expect(readFileSync(join(dir, "x.jsonl"), "utf8")).not.toMatch(/@/);
+  });
+
+  it("B2: the signature covers the header too (day, hashes, counts)", async () => {
+    for (let i = 0; i < 2; i++) await appendAudit(null, { actor: { type: "break_glass" }, action: "leads:view", result: "success" });
+    const list = rows().map(snake);
+    const text = buildExport(KEY, "2026-06-01", list, { id: list[1].id, hash: list[1].hash }, 2);
+    expect(verifyExportFile(KEY, text)).toMatchObject({ ok: true, header: { headId: list[1].id, totalRows: 2 } });
+    for (const edit of [['"day":"2026-06-01"', '"day":"2026-06-02"'], ['"totalRows":2', '"totalRows":1'], ['"rows":2', '"rows":3']]) {
+      expect(verifyExportFile(KEY, text.replace(edit[0], edit[1])), edit[0]).toMatchObject({ ok: false, problem: expect.stringMatching(/signature/) });
+    }
+  });
+
+  it("B4: the anchor from the latest export catches a cut-off tail and a wiped table", async () => {
+    for (let i = 0; i < 5; i++) await appendAudit(null, { actor: { type: "break_glass" }, action: "leads:view", result: "success" });
+    const all = rows().map(snake);
+    const header = verifyExportFile(KEY, buildExport(KEY, "2026-06-01", all.slice(0, 4), { id: all[3].id, hash: all[3].hash }, 4)).header;
+    expect(verifyDb(KEY, all, header)).toMatchObject({ ok: true }); // a newer row (5) is fine
+    expect(verifyRows(KEY, all.slice(0, 3))).toMatchObject({ ok: true }); // the chain walk alone misses the cut...
+    expect(verifyDb(KEY, all.slice(0, 3), header)).toMatchObject({ ok: false, brokenId: all[3].id, problem: expect.stringMatching(/missing/) }); // ...the anchor does not
+    expect(verifyDb(KEY, [], header)).toMatchObject({ ok: false, problem: expect.stringMatching(/cut or wiped/) });
   });
 
   it("readKey refuses a missing or short key", () => {

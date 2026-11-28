@@ -568,7 +568,7 @@ export const adminAudit = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     // ISO 8601 UTC.
     ts: text("ts").notNull(),
-    // "staff" | "break_glass" | "anonymous"
+    // "staff" | "break_glass" | "anonymous" | "server_cli" (scripts/create-staff.mjs)
     actorType: text("actor_type").notNull(),
     actorId: integer("actor_id"),
     // Role at the time of the action (null for break-glass / anonymous).

@@ -38,6 +38,46 @@ export function verifyRows(key, rows, startPrev = GENESIS_HASH) {
   return { ok: true, rows: rows.length, lastHash: prev };
 }
 
+/**
+ * Anchor check (review-022 B4): the chain head recorded in a signed export
+ * (headId, headHash, totalRows) must still be in the DB. Catches a cut-off
+ * tail or a wiped table, which a chain walk alone cannot see. `rows` are all
+ * DB rows in id order. Rows written after that export cannot be checked this
+ * way: the anchor is as fresh as the latest export (daily).
+ */
+export function checkAnchor(rows, header) {
+  if (!header.headId) return { ok: true, rows: rows.length };
+  const head = rows.find((r) => r.id === header.headId);
+  if (!head) return { ok: false, rows: rows.length, brokenId: header.headId, problem: `anchor row is missing: the log was cut or wiped (export ${header.day} saw ${header.totalRows} rows up to id ${header.headId})` };
+  if (head.hash !== header.headHash) return { ok: false, rows: rows.length, brokenId: header.headId, problem: "anchor row hash differs from the signed export (row changed or chain rebuilt)" };
+  const upTo = rows.filter((r) => r.id <= header.headId).length;
+  if (upTo !== header.totalRows) return { ok: false, rows: rows.length, brokenId: header.headId, problem: `${header.totalRows} rows up to id ${header.headId} in the export, ${upTo} now` };
+  return { ok: true, rows: rows.length };
+}
+
+/**
+ * Append one row from a server CLI tool (node:sqlite `db`), in the caller's
+ * transaction. Same rules as lib/api/audit.ts: ts never earlier than the last
+ * row's ts, prev_hash = last hash (UNIQUE index stops a fork).
+ */
+export function appendRowSync(db, key, entry) {
+  const last = db.prepare("SELECT hash, ts FROM admin_audit ORDER BY id DESC LIMIT 1").get();
+  const now = new Date().toISOString();
+  const row = {
+    ts: last && last.ts > now ? last.ts : now,
+    actor_type: entry.actor_type, actor_id: entry.actor_id ?? null, role: entry.role ?? null, action: entry.action,
+    target_type: entry.target_type ?? null, target_id: entry.target_id == null ? null : String(entry.target_id),
+    before_json: entry.before_json ?? null, after_json: entry.after_json ?? null, reason: entry.reason ?? null,
+    result: entry.result, ip_hash: null, request_id: null,
+  };
+  const prev = last?.hash ?? GENESIS_HASH;
+  const hash = rowHash(key, prev, row);
+  db.prepare(
+    "INSERT INTO admin_audit (ts, actor_type, actor_id, role, action, target_type, target_id, before_json, after_json, reason, result, ip_hash, request_id, prev_hash, hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+  ).run(row.ts, row.actor_type, row.actor_id, row.role, row.action, row.target_type, row.target_id, row.before_json, row.after_json, row.reason, row.result, row.ip_hash, row.request_id, prev, hash);
+  return hash;
+}
+
 export const sha256Hex = (text) => createHash("sha256").update(text).digest("hex");
 export const signExport = (key, digest) => createHmac("sha256", key).update(`usam-audit-export:${digest}`).digest("hex");
 
@@ -75,4 +115,10 @@ export function dbPath(explicit) {
 export async function openDb(path) {
   const { DatabaseSync } = await import("node:sqlite");
   return new DatabaseSync(path, { readOnly: true });
+}
+
+/** Newest export file in a folder (names sort by day), or null. */
+export function latestExport(dir) {
+  const files = readdirSync(dir).filter((f) => /^usam-audit-\d{4}-\d{2}-\d{2}\.jsonl$/.test(f)).sort();
+  return files.length ? join(dir, files.at(-1)) : null;
 }

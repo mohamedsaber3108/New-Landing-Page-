@@ -35,6 +35,7 @@ vi.mock("@/db", () => ({ getDb: () => db }));
 
 import { GENESIS_HASH, appendAudit } from "@/lib/api/audit";
 import * as chain from "../scripts/audit-chain.mjs";
+import { createStaffAccount } from "../scripts/create-staff.mjs";
 
 const all = () => state.sqlite.prepare("SELECT * FROM admin_audit ORDER BY id").all() as Record<string, unknown>[];
 
@@ -68,6 +69,35 @@ describe("admin_audit on SQLite", () => {
     const rows = all();
     expect(rows.map((r) => r.action)).toEqual(["leads:view", "consent:view", "outbox:retry"]);
     expect(chain.verifyRows(KEY, rows)).toMatchObject({ ok: true, rows: 3 });
+  });
+
+  it("B5: a long reason with emoji is stored and verifies on real SQLite (no split surrogate pair)", async () => {
+    await appendAudit(null, { actor: { type: "break_glass" }, action: "leads:view", result: "success", reason: `a${"😀".repeat(300)}` }); // old cut at 200 UTF-16 units split a pair
+    const rows = all();
+    expect(Array.from(String(rows[0].reason))).toHaveLength(200);
+    expect(chain.verifyRows(KEY, rows)).toMatchObject({ ok: true, rows: 1 });
+  });
+
+  it("B3: create-staff.mjs writes the account and a server_cli audit entry together; no e-mail or name in it", async () => {
+    for (const file of ["0005_cool_bullseye.sql", "0006_ancient_rumiko_fujikawa.sql"]) {
+      const sqlText = readFileSync(path.resolve(__dirname, `../drizzle/${file}`), "utf8");
+      for (const stmt of sqlText.split("--> statement-breakpoint")) if (stmt.trim()) state.sqlite.exec(stmt);
+    }
+    await appendAudit(null, { actor: { type: "break_glass" }, action: "leads:view", result: "success" });
+    const id = createStaffAccount(state.sqlite, { email: "new.admin@example.test", name: "New Admin", role: "admin", hash: "h" }, KEY);
+    await appendAudit(null, { actor: { type: "staff", id, role: "admin" }, action: "leads:view", result: "success" });
+    const rows = all();
+    expect(rows.map((r) => `${r.action}|${r.actor_type}|${r.target_id ?? ""}|${r.after_json ?? ""}`)).toEqual([
+      "leads:view|break_glass||",
+      `staff:create|server_cli|${id}|{"role":"admin"}`,
+      "leads:view|staff||",
+    ]);
+    expect(JSON.stringify(rows)).not.toMatch(/new\.admin|New Admin|@/);
+    expect(chain.verifyRows(KEY, rows)).toMatchObject({ ok: true, rows: 3 });
+    // Same e-mail again: refused, and neither a user nor an audit row is added.
+    expect(() => createStaffAccount(state.sqlite, { email: "new.admin@example.test", name: "X", role: "admin", hash: "h" }, KEY)).toThrow(/already exists/);
+    expect(all()).toHaveLength(3);
+    expect(state.sqlite.prepare("SELECT COUNT(*) AS n FROM staff_users").get()).toEqual({ n: 1 });
   });
 
   it("parallel appends on SQLite keep one chain", async () => {
