@@ -21,7 +21,8 @@ import { clientIp, limitKey, rateLimit } from "./rate-limit";
 import { publicUser } from "./staff-login";
 import { accountLocked, clearAccountFailures, pairLocked, recordAccountFailure, recordPairFailure } from "./staff-lockout";
 import { MfaNotConfigured, MfaSecretUnreadable, checkMfaCode, issueBackupCodes, normalizeCode, startEnrolment, verifyTotp } from "./staff-mfa";
-import { stepUpFresh, stepUpNeeded } from "./admin-auth";
+import { auditSensitive, stepUpFresh, stepUpNeeded } from "./admin-auth";
+import { appendAudit, staffActor, type AuditAction } from "./audit";
 import { STEP_UP_MS } from "./staff-permissions";
 import {
   createSession,
@@ -81,12 +82,18 @@ async function begin(
  * shortcut: the per-session count is in process memory like the other limits;
  * the revoke itself is in D1. Move the count to D1 if more than one instance runs.
  */
-async function guarded(request: Request, step: Step, check: () => Promise<boolean>): Promise<boolean> {
+async function guarded(request: Request, step: Step, action: AuditAction, check: () => Promise<boolean>): Promise<boolean> {
   const { user, sessionId, stage } = step.session;
   const ip = clientIp(request);
   const now = Date.now();
-  if (pairLocked(request, user.id, ip) || accountLocked(user.lockedUntil, now)) return false;
+  const audit = (result: "success" | "denied", why?: string) =>
+    appendAudit(request, { actor: staffActor(user), action, result, after: why ? { denied: why } : undefined });
+  if (pairLocked(request, user.id, ip) || accountLocked(user.lockedUntil, now)) {
+    await audit("denied", "locked");
+    return false;
+  }
   const passed = await check();
+  await audit(passed ? "success" : "denied", passed ? undefined : "bad_code");
   if (!passed) {
     recordPairFailure(request, user.id, ip);
     await recordAccountFailure(db(), user.id, now);
@@ -120,7 +127,7 @@ export function loginMfa(request: Request, requestId: string): Promise<Response>
   return run(requestId, async () => {
     const step = await begin(request, requestId, ["mfa_pending"], true);
     if (step instanceof Response) return step;
-    const passed = await guarded(request, step, () => checkMfaCode(step.session.user, step.code));
+    const passed = await guarded(request, step, "auth:login-mfa", () => checkMfaCode(step.session.user, step.code));
     if (!passed) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
     const cookie = await upgrade(request, step);
     return ok({ user: publicUser(step.session.user) }, { requestId, headers: { "Set-Cookie": cookie, ...NO_STORE } });
@@ -136,6 +143,7 @@ export function mfaSetup(request: Request, requestId: string): Promise<Response>
     // Turned on by a parallel request between the read and the UPDATE.
     if (!started) return fail({ code: "conflict", message: "MFA is already on for this account.", requestId });
     const { secret, otpauthUri } = started;
+    await appendAudit(request, { actor: staffActor(step.session.user), action: "auth:mfa-setup", result: "success", requestId });
     return ok({ otpauthUri, secret }, { requestId, headers: NO_STORE });
   });
 }
@@ -147,7 +155,7 @@ export function mfaVerify(request: Request, requestId: string): Promise<Response
     const user = step.session.user;
     // No set-up in progress is answered like a wrong code.
     if (user.mfaEnabledAt || !user.mfaSecretEnc) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
-    const passed = await guarded(request, step, () => verifyTotp(user, normalizeCode(step.code)));
+    const passed = await guarded(request, step, "auth:mfa-verify", () => verifyTotp(user, normalizeCode(step.code)));
     if (!passed) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
     // Atomic: only if MFA is still off AND the secret is the one just checked
     // (a parallel setup may have replaced it), so the app and the DB agree.
@@ -168,7 +176,14 @@ export function mfaBackupCodes(request: Request, requestId: string): Promise<Res
     const step = await begin(request, requestId, ["full"], false);
     if (step instanceof Response) return step;
     if (!step.session.user.mfaEnabledAt) return fail({ code: "conflict", message: "MFA is not on for this account.", requestId });
-    if (!stepUpFresh(step.session)) return stepUpNeeded(requestId);
+    const actor = staffActor(step.session.user);
+    if (!stepUpFresh(step.session)) {
+      await appendAudit(request, { actor, action: "auth:mfa-backup-codes", result: "denied", requestId, after: { denied: "step_up" } });
+      return stepUpNeeded(requestId);
+    }
+    // Sensitive (L-A2): the entry is written first; no entry, no new codes.
+    const auditDenied = await auditSensitive(request, requestId, { action: "auth:mfa-backup-codes", targetType: "staff_user", targetId: step.session.user.id }, actor);
+    if (auditDenied) return auditDenied;
     return ok({ backupCodes: await issueBackupCodes(step.session.user.id) }, { requestId, headers: NO_STORE });
   });
 }
@@ -177,7 +192,7 @@ export function mfaStepUp(request: Request, requestId: string): Promise<Response
   return run(requestId, async () => {
     const step = await begin(request, requestId, ["full"], true);
     if (step instanceof Response) return step;
-    const passed = await guarded(request, step, () => checkMfaCode(step.session.user, step.code));
+    const passed = await guarded(request, step, "auth:mfa-step-up", () => checkMfaCode(step.session.user, step.code));
     if (!passed) return fail({ code: "unauthenticated", message: BAD_CODE, requestId });
     await markMfaVerified(step.session.sessionId);
     return ok({ verifiedUntil: new Date(Date.now() + STEP_UP_MS).toISOString() }, { requestId, headers: NO_STORE });

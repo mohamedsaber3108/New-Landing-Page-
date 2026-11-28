@@ -1,7 +1,11 @@
 // Create a staff account in the LOCAL D1 the service uses (L-A1a).
 // Run on the server, from the repo root, after migration 0005 is applied:
 //
-//   node scripts/create-staff.mjs --email owner@example.com --name "Owner" --role super_admin
+//   node scripts/create-staff.mjs --email owner@example.com --name "Owner" --role super_admin [--vars <file>]
+//
+// L-A2: needs migration 0007 and USAM_AUDIT_HMAC_KEY (env, or the KEY=VALUE
+// file in --vars, default ~/.usam/dev.vars). The account and its audit entry
+// ("staff:create", actor server_cli) are written together, or not at all.
 //
 // The passphrase is read from STDIN only (typed twice, not echoed on a
 // terminal). It is never taken from argv or the environment, never printed,
@@ -15,6 +19,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
+import { appendRowSync, readKey } from "./audit-chain.mjs";
 
 export const PBKDF2_ITERATIONS = 600_000;
 export const MIN_PASSPHRASE_LENGTH = 14;
@@ -59,6 +64,8 @@ async function main() {
   if (!name || name.length > 120) throw new Error("--name is required (max 120 characters).");
   if (!ROLES.includes(role)) throw new Error(`--role must be one of: ${ROLES.join(", ")}.`);
   if (process.argv.some((a) => a.startsWith("--pass"))) throw new Error("Passphrases are read from stdin only.");
+  // Fail closed before asking for the passphrase: no audit key, no account.
+  const auditKey = readKey(arg("vars"));
 
   const first = await readSecret("Passphrase (min 14 characters): ");
   if (process.stdin.isTTY) {
@@ -73,15 +80,41 @@ async function main() {
   const { DatabaseSync } = await import("node:sqlite");
   const db = new DatabaseSync(join(dir, files[0]));
   try {
-    const exists = db.prepare("SELECT id FROM staff_users WHERE email = ?").get(email);
-    if (exists) throw new Error("A staff account with that email already exists.");
-    db.prepare(
-      "INSERT INTO staff_users (email, display_name, role, password_hash, created_at, failed_count) VALUES (?, ?, ?, ?, ?, 0)",
-    ).run(email, name, role, hash, new Date().toISOString());
+    createStaffAccount(db, { email, name, role, hash }, auditKey);
   } finally {
     db.close();
   }
   console.log(`Created ${role} account for ${email}.`);
+}
+
+/**
+ * Insert the account AND its audit entry in one write transaction (L-A2,
+ * review-022 B3: a new admin is a sensitive action, ADMIN.md s.5). The entry
+ * has actor_type "server_cli", no actor id, and only the new id and role:
+ * no e-mail or name. If the audit row cannot be written, no account is made.
+ */
+export function createStaffAccount(db, { email, name, role, hash }, auditKey) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const exists = db.prepare("SELECT id FROM staff_users WHERE email = ?").get(email);
+    if (exists) throw new Error("A staff account with that email already exists.");
+    const { lastInsertRowid } = db.prepare(
+      "INSERT INTO staff_users (email, display_name, role, password_hash, created_at, failed_count) VALUES (?, ?, ?, ?, ?, 0)",
+    ).run(email, name, role, hash, new Date().toISOString());
+    appendRowSync(db, auditKey, {
+      actor_type: "server_cli",
+      action: "staff:create",
+      target_type: "staff_user",
+      target_id: Number(lastInsertRowid),
+      after_json: JSON.stringify({ role }),
+      result: "success",
+    });
+    db.exec("COMMIT");
+    return Number(lastInsertRowid);
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

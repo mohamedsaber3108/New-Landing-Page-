@@ -21,6 +21,8 @@ export const PERMISSIONS = [
   "policies:view",
   "policies:edit-draft",
   "policies:publish",
+  // L-A2: read the admin audit log (Super Admin and Admin).
+  "audit:view",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -43,6 +45,7 @@ export const ROLE_PERMISSIONS: Record<StaffRole, readonly Permission[]> = {
     "outbox:retry",
     "policies:view",
     "policies:edit-draft",
+    "audit:view",
   ],
   // ADMIN.md s.2: view, assign, change status of leads. Nothing else.
   lead_inbox_agent: ["leads:view", "leads:assign", "leads:update-status"],
@@ -79,4 +82,5 @@ export const ROUTE_PERMISSIONS = {
   "POST /api/v1/admin/outbox/process": "outbox:retry",
   "GET /api/v1/admin/policies": "policies:view",
   "POST /api/v1/admin/policies": "policies:publish",
+  "GET /api/v1/admin/audit": "audit:view",
 } as const satisfies Record<string, Permission>;

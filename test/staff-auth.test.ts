@@ -17,6 +17,7 @@ const store = new FakeStore();
 vi.mock("@/db", () => ({ getDb: () => store }));
 vi.mock("@/app/chatgpt-auth", () => ({ getChatGPTUser: async () => null }));
 
+import * as auditRoute from "@/app/api/v1/admin/audit/route";
 import * as consentRoute from "@/app/api/v1/admin/consent/route";
 import * as leadsRoute from "@/app/api/v1/admin/leads/route";
 import * as outboxRoute from "@/app/api/v1/admin/outbox/process/route";
@@ -95,6 +96,7 @@ beforeEach(async () => {
   store.tables = { enquiries: [], idempotency_keys: [], outbox_events: [], consent_events: [], policy_publications: [], privacy_requests: [], staff_users: [], staff_sessions: [], staff_backup_codes: [] };
   resetRateLimits();
   ENV.USAM_MFA_ENCRYPTION_KEY = "m".repeat(40); // test-only
+  ENV.USAM_AUDIT_HMAC_KEY = "u".repeat(40); // test-only (L-A2: publish is sensitive)
   delete ENV.USAM_ADMIN_TOKEN;
   delete ENV.USAM_LEAD_NOTIFY_WEBHOOK;
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -106,6 +108,7 @@ beforeEach(async () => {
 afterEach(() => {
   vi.useRealTimers();
   delete ENV.USAM_MFA_ENCRYPTION_KEY;
+  delete ENV.USAM_AUDIT_HMAC_KEY;
 });
 
 describe("passphrase hashing", () => {
@@ -267,6 +270,7 @@ const ROUTES: Record<keyof typeof ROUTE_PERMISSIONS, { handler: Handler; body?: 
   "POST /api/v1/admin/outbox/process": { handler: outboxRoute.POST },
   "GET /api/v1/admin/policies": { handler: policiesRoute.GET },
   "POST /api/v1/admin/policies": { handler: policiesRoute.POST, body: { policyType: "terms", locale: "en", version: "role-test" } },
+  "GET /api/v1/admin/audit": { handler: auditRoute.GET },
 };
 
 describe("role x route (permission from lib/api/staff-permissions.ts)", () => {

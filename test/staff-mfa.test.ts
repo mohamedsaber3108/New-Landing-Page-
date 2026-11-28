@@ -98,6 +98,7 @@ beforeEach(async () => {
   resetRateLimits();
   delete ENV.USAM_ADMIN_TOKEN;
   ENV.USAM_MFA_ENCRYPTION_KEY = KEY;
+  ENV.USAM_AUDIT_HMAC_KEY = "v".repeat(40); // test-only (L-A2)
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-06-01T08:00:00.000Z"));
   await addUser("owner@example.test", "super_admin", OWNER_SECRET);
@@ -107,6 +108,7 @@ beforeEach(async () => {
 afterEach(() => {
   vi.useRealTimers();
   delete ENV.USAM_MFA_ENCRYPTION_KEY;
+  delete ENV.USAM_AUDIT_HMAC_KEY;
 });
 
 describe("TOTP (RFC 6238, SHA-1, 6 digits, 30 s)", () => {
@@ -348,6 +350,24 @@ describe("step-up for sensitive actions (5 minutes)", () => {
     expect((await code(cookie, "/mfa/step-up", "000000")).status).toBe(401);
     expect((await code(cookie, "/mfa/step-up", await totp(OWNER_SECRET))).status).toBe(200);
     expect([401, 403]).not.toContain((await publish({ cookie })).status);
+    // L-A2: the audit log holds the missing step-up and the wrong code as denied tries.
+    const log = store.tables.admin_audit.map((r) => `${r.action}|${r.result}|${r.actorId}|${r.afterJson ?? ""}`);
+    expect(log).toContain('policies:publish|denied|1|{"denied":"step_up"}');
+    expect(log).toContain('auth:mfa-step-up|denied|1|{"denied":"bad_code"}');
+    expect(log.filter((l) => l.startsWith("policies:publish|success"))).toHaveLength(2);
+  });
+
+  it("L-A2: wrong sign-in code is logged; new backup codes are refused (503) when the audit log cannot be written", async () => {
+    const pending = cookieOf(await login("owner@example.test"));
+    await code(pending, "/login/mfa", "111111");
+    expect(store.tables.admin_audit.some((r) => r.action === "auth:login-mfa" && r.result === "denied")).toBe(true);
+    tick();
+    const ok = await code(pending, "/login/mfa", await totp(OWNER_SECRET));
+    const cookie = cookieOf(ok);
+    delete ENV.USAM_AUDIT_HMAC_KEY;
+    const res = await backupPOST(req("/api/v1/admin/auth/mfa/backup-codes", { cookie }));
+    expect(res.status).toBe(503);
+    expect(store.tables.staff_backup_codes).toHaveLength(0);
   });
 
   it("new backup codes need step-up; the new set replaces the old one", async () => {

@@ -9,7 +9,7 @@
 // published version, falling back to the built-in draft baseline.
 
 import { fail, newRequestId, ok } from "@/lib/api/envelope";
-import { authorizeAdmin } from "@/lib/api/admin-auth";
+import { auditFailed, auditSensitive, authorizeAdmin } from "@/lib/api/admin-auth";
 import { ROUTE_PERMISSIONS } from "@/lib/api/staff-permissions";
 import { z } from "zod";
 import { listPolicyHistory, listPolicyOverview, publishPolicy, resolvePolicy } from "@/lib/legal/store";
@@ -71,6 +71,12 @@ export async function POST(request: Request) {
     return fail({ code: "validation_failed", message: "Invalid publish request.", requestId });
   }
 
+  // Sensitive action (L-A2): the audit entry is written first; no entry, no publish.
+  const target = { action: "policies:publish" as const, targetType: "policy", targetId: `${parsed.data.policyType}:${parsed.data.locale}` };
+  const after = { version: parsed.data.version, materialChange: parsed.data.materialChange ?? false, effectiveAt: parsed.data.effectiveAt ?? null };
+  const auditDenied = await auditSensitive(request, requestId, { ...target, after });
+  if (auditDenied) return auditDenied;
+
   const result = await publishPolicy({
     policyType: parsed.data.policyType as PolicyType,
     locale: parsed.data.locale,
@@ -81,6 +87,7 @@ export async function POST(request: Request) {
     publishedBy: parsed.data.publishedBy ?? null,
   });
   if (!result.ok) {
+    await auditFailed(request, requestId, { ...target, after });
     return fail({ code: "internal_error", message: result.message, requestId });
   }
   return ok({ published: true, version: result.version }, { status: 201, requestId });

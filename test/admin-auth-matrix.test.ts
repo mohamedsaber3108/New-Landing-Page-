@@ -28,6 +28,7 @@ const store = new FakeStore();
 vi.mock("@/db", () => ({ getDb: () => store }));
 vi.mock("@/app/chatgpt-auth", () => ({ getChatGPTUser: async () => null }));
 
+import * as auditRoute from "@/app/api/v1/admin/audit/route";
 import * as consentRoute from "@/app/api/v1/admin/consent/route";
 import * as leadsRoute from "@/app/api/v1/admin/leads/route";
 import * as outboxRoute from "@/app/api/v1/admin/outbox/process/route";
@@ -68,6 +69,7 @@ const CASES: Case[] = [
     body: () => ({ policyType: "terms", locale: "en", version: `matrix-${ip}` }),
   },
   { route: "privacy-requests", method: "GET", handler: privacyRoute.GET },
+  { route: "audit", method: "GET", handler: auditRoute.GET },
   {
     route: "privacy-requests",
     method: "PATCH",
@@ -110,9 +112,11 @@ beforeEach(async () => {
   resetRateLimits();
   delete ENV.USAM_LEAD_NOTIFY_WEBHOOK; // outbox process stays in its "disabled" 200 path
   delete ENV.USAM_LEAD_NOTIFY_EMAIL;
+  ENV.USAM_AUDIT_HMAC_KEY = "m".repeat(40); // L-A2: sensitive POST policies needs the audit log
   await seed();
 });
 afterAll(() => {
+  delete ENV.USAM_AUDIT_HMAC_KEY;
   for (const [k, v] of [["USAM_ADMIN_TOKEN", original.token], ["USAM_LEAD_NOTIFY_WEBHOOK", original.hook], ["USAM_LEAD_NOTIFY_EMAIL", original.mail]] as const) {
     if (v === undefined) delete ENV[k];
     else ENV[k] = v;
